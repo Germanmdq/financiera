@@ -72,24 +72,40 @@ function HomeView({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number
  const delta=previousTotal?Math.round(((monthTotal-previousTotal)/previousTotal)*100):0;
  const top=Object.entries(txs.filter(t=>t.date.startsWith(currentMonth)).reduce<Record<string,number>>((a,t)=>{a[t.category]=(a[t.category]||0)+t.amount;return a},{})).sort((a,b)=>b[1]-a[1]).slice(0,3);
  return <section className="home-stack">
-   <div className={`video-hero ${videoOk?'':'video-fallback'}`}>
-     {videoOk&&<video autoPlay muted playsInline loop preload="metadata" src="/intro-finanzas.mp4" onError={()=>setVideoOk(false)}/>}
-     <div className="video-shade"/>
-     <div className="video-copy"><span className="video-kicker">TU PLATA, MÁS CLARA</span><h1>Entendé qué pasa con tu dinero.</h1><p>Sin planillas. Sin vueltas.</p></div>
+   <div className="home-top-grid">
+     <div className={`video-hero ${videoOk?'':'video-fallback'}`}>
+       {videoOk&&<video autoPlay muted playsInline loop preload="metadata" src="/intro-finanzas.mp4" onError={()=>setVideoOk(false)}/>}
+       <div className="video-shade"/>
+       <div className="video-copy"><span className="video-kicker">TU PLATA, MÁS CLARA</span><h1>Entendé qué pasa con tu dinero.</h1><p>Sin planillas. Sin vueltas.</p></div>
+     </div>
+     <div className="home-rail">
+       <div className="primary-actions">
+         <button className="primary-action load" onClick={()=>go('add')}><span><ScanLine/></span><div><b>Cargar</b><small>Ticket, PDF, gasto o cuenta</small></div><ChevronRight/></button>
+         <button className="primary-action activity" onClick={()=>go('activity')}><span><ActivityIcon/></span><div><b>Cómo va mi actividad</b><small>Qué gastaste y qué está cambiando</small></div><ChevronRight/></button>
+       </div>
+       <section className="month-card"><div className="month-head"><div><span>Septiembre hasta hoy</span><strong>{money(monthTotal)}</strong></div><button onClick={openAgent}><Sparkles size={16}/> Preguntar</button></div><p>{delta>=0?`Llevás ${Math.abs(delta)}% más que en agosto.`:`Llevás ${Math.abs(delta)}% menos que en agosto.`} Lo importante no es una barra: es entender por qué.</p></section>
+     </div>
    </div>
-   <div className="primary-actions">
-     <button className="primary-action load" onClick={()=>go('add')}><span><ScanLine/></span><div><b>Cargar</b><small>Ticket, PDF, gasto o cuenta</small></div><ChevronRight/></button>
-     <button className="primary-action activity" onClick={()=>go('activity')}><span><ActivityIcon/></span><div><b>Cómo va mi actividad</b><small>Qué gastaste y qué está cambiando</small></div><ChevronRight/></button>
-   </div>
-   <section className="month-card"><div className="month-head"><div><span>Septiembre hasta hoy</span><strong>{money(monthTotal)}</strong></div><button onClick={openAgent}><Sparkles size={16}/> Preguntar</button></div><p>{delta>=0?`Llevás ${Math.abs(delta)}% más que en agosto.`:`Llevás ${Math.abs(delta)}% menos que en agosto.`} Lo importante no es una barra: es entender por qué.</p></section>
    <div className="section-title"><div><span>LO QUE TE CONVIENE MIRAR</span><h2>Tu actividad, explicada</h2></div></div>
    <div className="insight-grid">
      <article className="insight lavender"><span>01</span><div><b>Antes del 8 de octubre</b><strong>$959.490</strong><p>Visa Santander, colegio y servicios.</p></div></article>
      <article className="insight mint"><span>02</span><div><b>Mayor peso del mes</b><strong>{top[0]?.[0]||'—'}</strong><p>{top[0]?money(top[0][1]):'Sin datos'}</p></div></article>
      <article className="insight peach"><span>03</span><div><b>Gastos que se repiten</b><strong>Streaming + IA</strong><p>Netflix, Spotify, OpenAI, Claude, Disney+ y más.</p></div></article>
    </div>
-   <div className="section-title"><div><span>MOVIMIENTOS</span><h2>Últimos gastos</h2></div><button onClick={()=>go('activity')}>Ver todos</button></div>
-   <TxList items={txs.slice(0,6)}/>
+   <div className="home-bottom-grid">
+     <div className="home-movements">
+       <div className="section-title"><div><span>MOVIMIENTOS</span><h2>Últimos gastos</h2></div><button onClick={()=>go('activity')}>Ver todos</button></div>
+       <TxList items={txs.slice(0,6)}/>
+     </div>
+     <aside className="upcoming-card">
+       <span>PRÓXIMOS PAGOS</span>
+       <h3>Lo que viene ahora</h3>
+       <div><b>03 oct</b><p>Visa Santander</p><strong>$ 684.320</strong></div>
+       <div><b>05 oct</b><p>Colegio San José</p><strong>$ 185.000</strong></div>
+       <div><b>08 oct</b><p>Servicios</p><strong>$ 90.170</strong></div>
+       <button onClick={openAgent}><Sparkles size={16}/> Preguntarle al asistente</button>
+     </aside>
+   </div>
  </section>
 }
 
@@ -97,13 +113,9 @@ function Activity({txs,monthTotal,previousTotal}:{txs:Tx[];monthTotal:number;pre
  const current=txs.filter(t=>t.date.startsWith(currentMonth));
  const categories=Object.entries(current.reduce<Record<string,number>>((a,t)=>{a[t.category]=(a[t.category]||0)+t.amount;return a},{})).sort((a,b)=>b[1]-a[1]).slice(0,5);
  const recurring=['Colegio San José','Netflix','Spotify','OpenAI','Claude','Flow','Personal','Sancor Seguros','EDEA','Camuzzi'];
- return <section className="stack">
-   <Card padding={4}><div className="plain-summary"><span>GASTADO ESTE MES</span><strong>{money(monthTotal)}</strong><small>{current.length} movimientos · agosto {money(previousTotal)}</small></div></Card>
-   <div className="analysis-card"><span>Qué está pasando</span><h2>No necesitás mirar gráficos para entenderlo.</h2><p>Septiembre está empujado por colegio, supermercado, servicios y varias suscripciones digitales. Tenés también gastos recurrentes de IA que conviene mirar juntos, no uno por uno.</p></div>
-   <div className="section-title"><div><span>DONDE MÁS SE FUE</span><h2>Principales rubros</h2></div></div>
-   <div className="category-list">{categories.map(([name,amount],i)=><div className="category-row" key={name}><span>{String(i+1).padStart(2,'0')}</span><div><b>{name}</b><small>{current.filter(t=>t.category===name).length} movimientos</small></div><strong>{money(amount)}</strong></div>)}</div>
-   <div className="section-title"><div><span>SE REPITEN</span><h2>Gastos fijos y suscripciones</h2></div></div>
-   <div className="repeat-card">{recurring.map(name=>{const hit=current.find(t=>t.name===name);return hit?<div key={name}><b>{name}</b><span>{money(hit.amount)}</span></div>:null})}</div>
+ return <section className="stack activity-stack">
+   <div className="activity-top-grid"><Card padding={4}><div className="plain-summary"><span>GASTADO ESTE MES</span><strong>{money(monthTotal)}</strong><small>{current.length} movimientos · agosto {money(previousTotal)}</small></div></Card><div className="analysis-card"><span>Qué está pasando</span><h2>No necesitás mirar gráficos para entenderlo.</h2><p>Septiembre está empujado por colegio, supermercado, servicios y varias suscripciones digitales. Tenés también gastos recurrentes de IA que conviene mirar juntos, no uno por uno.</p></div></div>
+   <div className="activity-panels"><div><div className="section-title"><div><span>DONDE MÁS SE FUE</span><h2>Principales rubros</h2></div></div><div className="category-list">{categories.map(([name,amount],i)=><div className="category-row" key={name}><span>{String(i+1).padStart(2,'0')}</span><div><b>{name}</b><small>{current.filter(t=>t.category===name).length} movimientos</small></div><strong>{money(amount)}</strong></div>)}</div></div><div><div className="section-title"><div><span>SE REPITEN</span><h2>Gastos fijos y suscripciones</h2></div></div><div className="repeat-card">{recurring.map(name=>{const hit=current.find(t=>t.name===name);return hit?<div key={name}><b>{name}</b><span>{money(hit.amount)}</span></div>:null})}</div></div></div>
    <div className="section-title"><div><span>HISTORIAL</span><h2>Todos los movimientos</h2></div></div>
    <TxList items={txs}/>
  </section>
@@ -111,16 +123,14 @@ function Activity({txs,monthTotal,previousTotal}:{txs:Tx[];monthTotal:number;pre
 
 function TxList({items}:{items:Tx[]}){return <div className="tx-list">{items.map(t=><div className="tx" key={t.id}><span className="tx-icon"><ShoppingBag size={17}/></span><div><b>{t.name}</b><small>{new Date(t.date+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short'})} · {t.category} · {t.source}</small></div><strong>{money(t.amount)}</strong></div>)}</div>}
 
-function Add({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){return <section className="stack">
- <div className="scanner-card" role="button" tabIndex={0} onClick={()=>scanRef.current?.click()} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();scanRef.current?.click()}}}><div className="scanner-icon"><Camera/></div><div><span>ESCÁNER INTELIGENTE</span><h2>Apuntá al ticket y listo.</h2><p>Lee comercio, importe, fecha, impuestos y forma de pago. Después revisás los datos antes de guardarlos.</p></div><div className="scanner-cta"><Camera size={18}/><b>Abrir cámara</b><ChevronRight size={18}/></div></div>
+function Add({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){return <section className="stack add-stack">
+ <div className="add-top-grid"><div className="scanner-card" role="button" tabIndex={0} onClick={()=>scanRef.current?.click()} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();scanRef.current?.click()}}}><div className="scanner-icon"><Camera/></div><div><span>ESCÁNER INTELIGENTE</span><h2>Apuntá al ticket y listo.</h2><p>Lee comercio, importe, fecha, impuestos y forma de pago. Después revisás los datos antes de guardarlos.</p></div><div className="scanner-cta"><Camera size={18}/><b>Abrir cámara</b><ChevronRight size={18}/></div></div><div className="add-sources"><div className="section-title"><div><span>OTRAS FORMAS</span><h2>¿Cómo querés cargarlo?</h2></div></div><div className="source-grid"><Source icon={FileText} title="Subir PDF" copy="Tarjeta, banco, factura o resumen" click={()=>pdfRef.current?.click()}/><Source icon={CircleDollarSign} title="Carga manual" copy="Efectivo o cualquier gasto rápido" click={()=>document.getElementById('manual')?.scrollIntoView({behavior:'smooth'})}/><Source icon={Mail} title="Mail" copy="Facturas y comprobantes" click={()=>setNotice('La conexión con Gmail/Outlook se habilita con autorización OAuth.')}/><Source icon={Landmark} title="Banco" copy="Cuentas y tarjetas" click={()=>setNotice('La conexión bancaria necesita autorización segura del proveedor.')}/><Source icon={Wallet} title="Billetera" copy="Mercado Pago, Ualá y más" click={()=>setNotice('La conexión de billeteras queda preparada para autorización.')}/><Source icon={ReceiptText} title="Factura / QR" copy="Leé el comprobante con la cámara" click={()=>scanRef.current?.click()}/></div></div></div>
  <input ref={scanRef} hidden type="file" accept="image/*" capture="environment" onChange={e=>e.target.files?.[0]&&scan(e.target.files[0])}/><input ref={pdfRef} hidden type="file" accept="application/pdf" onChange={e=>e.target.files?.[0]&&pdf(e.target.files[0])}/>
- <div className="section-title"><div><span>OTRAS FORMAS</span><h2>¿Cómo querés cargarlo?</h2></div></div>
- <div className="source-grid"><Source icon={FileText} title="Subir PDF" copy="Tarjeta, banco, factura o resumen" click={()=>pdfRef.current?.click()}/><Source icon={CircleDollarSign} title="Carga manual" copy="Efectivo o cualquier gasto rápido" click={()=>document.getElementById('manual')?.scrollIntoView({behavior:'smooth'})}/><Source icon={Mail} title="Mail" copy="Facturas y comprobantes" click={()=>setNotice('La conexión con Gmail/Outlook se habilita con autorización OAuth.')}/><Source icon={Landmark} title="Banco" copy="Cuentas y tarjetas" click={()=>setNotice('La conexión bancaria necesita autorización segura del proveedor.')}/><Source icon={Wallet} title="Billetera" copy="Mercado Pago, Ualá y más" click={()=>setNotice('La conexión de billeteras queda preparada para autorización.')}/><Source icon={ReceiptText} title="Factura / QR" copy="Leé el comprobante con la cámara" click={()=>scanRef.current?.click()}/></div>
  {notice&&<div className="notice">{busy?'Procesando… ':''}{notice}</div>}
  <Card padding={4}><div id="manual" className="manual"><h2>Carga manual</h2><TextInput label="Concepto" value={manual.name} onChange={(v:string)=>setManual({...manual,name:v})} width="100%"/><TextInput label="Importe" value={manual.amount} onChange={(v:string)=>setManual({...manual,amount:v})} width="100%"/><TextInput label="Categoría" value={manual.category} onChange={(v:string)=>setManual({...manual,category:v})} width="100%"/><Button label="Guardar gasto" variant="primary" width="100%" onClick={()=>{if(!manual.name||!manual.amount)return;addTx({name:manual.name,amount:Number(String(manual.amount).replace(/\D/g,'')),date:new Date().toISOString().slice(0,10),category:manual.category||'Otros',source:manual.source});setManual({name:'',amount:'',category:'',source:'Efectivo'})}}/></div></Card>
  </section>}
 
-function Accounts({go}:{go:(v:View)=>void}){const acc=[['Santander','Cuenta + Visa','$ 1.284.300','rose'],['Banco Galicia','Caja de ahorro','$ 842.900','orange'],['BBVA','Mastercard','$ 386.120','blue'],['Mercado Pago','Billetera','$ 214.800','cyan'],['Ualá','Billetera','$ 98.700','violet']];return <section className="stack"><p className="lead">Reuní cuentas, tarjetas y billeteras para entender tu situación completa.</p>{acc.map(a=><button className={`account ${a[3]}`} key={a[0]}><span><Landmark/></span><div><b>{a[0]}</b><small>{a[1]}</small></div><strong>{a[2]}</strong><ChevronRight/></button>)}<Button label="Agregar otra fuente" variant="primary" width="100%" onClick={()=>go('add')}/></section>}
+function Accounts({go}:{go:(v:View)=>void}){const acc=[['Santander','Cuenta + Visa','$ 1.284.300','rose'],['Banco Galicia','Caja de ahorro','$ 842.900','orange'],['BBVA','Mastercard','$ 386.120','blue'],['Mercado Pago','Billetera','$ 214.800','cyan'],['Ualá','Billetera','$ 98.700','violet']];return <section className="stack accounts-stack"><p className="lead">Reuní cuentas, tarjetas y billeteras para entender tu situación completa.</p><div className="accounts-grid">{acc.map(a=><button className={`account ${a[3]}`} key={a[0]}><span><Landmark/></span><div><b>{a[0]}</b><small>{a[1]}</small></div><strong>{a[2]}</strong><ChevronRight/></button>)}</div><Button label="Agregar otra fuente" variant="primary" width="100%" onClick={()=>go('add')}/></section>}
 
 function Ask({msgs,ask,busy,panel=false}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean;panel?:boolean}){
  const prompts=['¿En qué estoy gastando de más?','¿Qué pagos se repiten todos los meses?','¿Cuánto gasté en IA estos tres meses?','¿Qué tengo que pagar esta semana?'];

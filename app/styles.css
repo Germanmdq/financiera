@@ -154,6 +154,14 @@ button{color:inherit}
 }
 .month-head button:hover{background:#e2dcff}.month-head button:active{scale:.96}
 .month-card p{font-size:16px;line-height:1.5;color:#56525b;margin:15px 0 0}
+.home-top-grid,.home-rail,.home-bottom-grid,.home-movements,.activity-top-grid,.activity-panels,.add-top-grid,.add-sources,.accounts-grid{min-width:0}
+.home-top-grid,.home-rail,.home-bottom-grid,.activity-top-grid,.activity-panels,.add-top-grid{display:grid;gap:18px}
+.upcoming-card{background:#fff;border-radius:24px;padding:20px;box-shadow:var(--shadow-border)}
+.upcoming-card>span{font-size:11px;letter-spacing:.16em;font-weight:800;color:var(--accent)}
+.upcoming-card h3{font-size:22px;letter-spacing:-.7px;margin:7px 0 16px}
+.upcoming-card>div{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}
+.upcoming-card>div b{font-size:12px;color:#7e7885}.upcoming-card>div p{margin:0;font-size:14px;font-weight:700}.upcoming-card>div strong{font-size:14px}
+.upcoming-card>button{margin-top:16px;width:100%;border:0;border-radius:15px;background:var(--accent-soft);color:#5d50c8;min-height:46px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:8px}
 
 .section-title{display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px;padding:0 2px}
 .section-title h2{font-size:24px;letter-spacing:-.8px;margin:5px 0 0}
@@ -359,17 +367,28 @@ button{color:inherit}
   .desktop-topbar{display:flex;min-height:102px;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,.06);margin-bottom:28px}
   .desktop-topbar span{font-size:11px;letter-spacing:.15em;font-weight:800;color:#817b88}.desktop-topbar h1{font-size:28px;letter-spacing:-1px;margin:6px 0 0}
   .mobile-only{display:none!important}
-  .home-stack{grid-template-columns:repeat(12,minmax(0,1fr));gap:18px 20px}
-  .home-stack>.video-hero{grid-column:span 8;height:360px}
-  .home-stack>.primary-actions{grid-column:9 / -1;grid-template-columns:1fr;align-self:start}
-  .home-stack>.month-card{grid-column:9 / -1;align-self:stretch}
-  .home-stack>.section-title{grid-column:1 / -1}
-  .home-stack>.insight-grid{grid-column:1 / -1;grid-template-columns:repeat(3,minmax(0,1fr))}
-  .home-stack>.tx-list{grid-column:1 / -1}
-  .primary-action{min-height:105px}
+  .home-stack{display:grid;gap:22px}
+  .home-top-grid{grid-template-columns:minmax(0,2fr) minmax(320px,.9fr);align-items:stretch}
+  .home-top-grid>.video-hero{height:100%;min-height:380px}
+  .home-rail{grid-template-rows:auto 1fr;gap:14px}
+  .home-rail .primary-actions{grid-template-columns:1fr;gap:12px}
+  .home-rail .primary-action{min-height:92px}
+  .home-rail .month-card{min-height:0;align-self:stretch;padding:20px}
+  .home-stack>.insight-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .home-bottom-grid{grid-template-columns:minmax(0,1.65fr) minmax(300px,.75fr);align-items:start}
+  .home-movements{display:grid;gap:12px}
+  .home-movements .section-title{margin-top:0}
+  .upcoming-card{position:sticky;top:120px}
   .video-copy h1{font-size:46px;max-width:620px}
-  .stack{max-width:none;margin-inline:0}
+  .stack{max-width:none;margin-inline:0;gap:22px}
+  .activity-top-grid{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
+  .activity-panels{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  .activity-panels>.section-title{margin-top:0}
+  .add-top-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);align-items:start}
+  .add-sources{display:grid;gap:12px}.add-sources .section-title{margin-top:0}
+  .add-sources .source-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .source-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .accounts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   .nav{display:none}
   .agent-fab{bottom:28px;right:28px}
   .account{padding:16px 18px}.account b{font-size:15px}.account small{font-size:12px}.account strong{font-size:14px}
