@@ -94,13 +94,21 @@ button{color:inherit}
   outline-offset:-1px;
   animation:hero-enter 420ms ease-out both;
 }
-.video-hero.video-fallback::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 70% 25%,rgba(255,255,255,.09),transparent 32%),linear-gradient(135deg,#272833,#1d1e27)}
+.video-hero.video-fallback{background:#fff;box-shadow:var(--shadow-border);outline-color:rgba(0,0,0,.05)}
+.video-hero.video-fallback video{opacity:0;pointer-events:none;position:absolute;inset:0}
 .video-hero video{position:relative;z-index:0;width:100%;height:100%;object-fit:cover;display:block}
 .video-shade{position:absolute;z-index:1;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 15%,rgba(0,0,0,.2) 52%,rgba(0,0,0,.78) 100%);pointer-events:none}
-.video-copy{position:absolute;z-index:2;left:24px;right:24px;bottom:24px;color:white}
-.video-kicker{color:#fff;opacity:.74}
-.video-copy h1{color:#fff;font-size:32px;line-height:1.01;letter-spacing:-1.5px;margin:8px 0 8px;max-width:480px;text-wrap:balance;text-shadow:0 1px 12px rgba(0,0,0,.18)}
-.video-copy p{margin:0;font-size:16px;line-height:1.4;color:rgba(255,255,255,.88)}
+.hero-summary{position:absolute;inset:0;z-index:2;padding:26px;display:flex;flex-direction:column;background:linear-gradient(135deg,#ffffff 0%,#f7f5ff 100%);color:var(--ink)}
+.hero-summary>span{font-size:11px;letter-spacing:.16em;font-weight:800;color:#6a5bd7}
+.hero-summary>strong{font-size:42px;letter-spacing:-2px;line-height:1;margin-top:10px;font-variant-numeric:tabular-nums}
+.hero-summary>p{font-size:15px;color:#6f6b73;margin:8px 0 20px}
+.hero-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:auto}
+.hero-summary-grid>div{background:#fff;border-radius:18px;padding:14px;box-shadow:var(--shadow-border)}
+.hero-summary-grid small,.hero-summary-grid b,.hero-summary-grid strong{display:block}
+.hero-summary-grid small{font-size:11px;color:#86818a}.hero-summary-grid b{font-size:13px;margin-top:5px}.hero-summary-grid strong{font-size:18px;margin-top:8px}
+.hero-summary-actions{display:flex;gap:10px;margin-top:12px}
+.hero-summary-actions button{border:0;border-radius:14px;min-height:42px;padding:0 14px;background:#f0ecff;color:#5c50c5;font-size:13px;font-weight:750}
+.hero-summary-actions button:first-child{background:#232531;color:#fff}
 
 .primary-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;animation:section-enter 420ms 90ms ease-out both;width:100%;max-width:100%}
 .primary-action{

@@ -73,11 +73,19 @@ function HomeView({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number
  const top=Object.entries(txs.filter(t=>t.date.startsWith(currentMonth)).reduce<Record<string,number>>((a,t)=>{a[t.category]=(a[t.category]||0)+t.amount;return a},{})).sort((a,b)=>b[1]-a[1]).slice(0,3);
  return <section className="home-stack">
    <div className="home-top-grid">
-     <div className={`video-hero ${videoOk?'':'video-fallback'}`}>
-       <video autoPlay muted playsInline loop preload="metadata" src="/intro-finanzas.mp4" onCanPlay={()=>setVideoOk(true)} onError={()=>setVideoOk(false)}/>
-       <div className="video-shade"/>
-       <div className="video-copy" aria-hidden="true" />
-     </div>
+    <div className={`video-hero ${videoOk?'':'video-fallback'}`}>
+      <video autoPlay muted playsInline loop preload="metadata" src="/intro-finanzas.mp4" onCanPlay={()=>setVideoOk(true)} onError={()=>setVideoOk(false)}/>
+      {videoOk?<div className="video-shade"/>:<div className="hero-summary">
+        <span>RESUMEN DE SEPTIEMBRE</span>
+        <strong>{money(monthTotal)}</strong>
+        <p>{txs.filter(t=>t.date.startsWith(currentMonth)).length} movimientos cargados hasta hoy.</p>
+        <div className="hero-summary-grid">
+          <div><small>Próximo vencimiento</small><b>03 oct · Visa Santander</b><strong>$ 684.320</strong></div>
+          <div><small>Mayor rubro</small><b>{top[0]?.[0]||'—'}</b><strong>{top[0]?money(top[0][1]):'Sin datos'}</strong></div>
+        </div>
+        <div className="hero-summary-actions"><button onClick={()=>go('activity')}>Ver actividad</button><button onClick={openAgent}>Preguntar al asistente</button></div>
+      </div>}
+    </div>
      <div className="home-rail">
        <div className="primary-actions">
          <button className="primary-action load" onClick={()=>go('add')}><span><ScanLine/></span><div><b>Cargar</b><small>Ticket, PDF, gasto o cuenta</small></div><ChevronRight/></button>
