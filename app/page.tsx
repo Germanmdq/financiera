@@ -6,7 +6,7 @@ import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {ChatComposer,ChatDictationButton,ChatMessage,ChatMessageBubble,ChatMessageList,useChatDictation} from '@astryxdesign/core/Chat';
-import {Activity as ActivityIcon,ArrowUp,Camera,ChevronRight,CircleDollarSign,FileText,Home,Landmark,Mail,MessageCircleMore,Plus,ReceiptText,ScanLine,ShoppingBag,Sparkles,Upload,Wallet,WalletCards} from 'lucide-react';
+import {Activity as ActivityIcon,ArrowLeftRight,ArrowUp,Camera,ChevronRight,CircleDollarSign,FileText,Home,Landmark,Mail,MessageCircleMore,Plus,ReceiptText,ScanLine,ShoppingBag,Sparkles,Upload,Wallet,WalletCards} from 'lucide-react';
 import {seedTransactions,type Tx} from './data';
 
 type View='home'|'activity'|'add'|'accounts'|'ask';
@@ -117,7 +117,7 @@ function Ask({msgs,ask,busy}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean}){
    {msgs.length===0&&<div className="prompt-grid">{prompts.map(p=><button className="prompt-chip" key={p} onClick={()=>send(p)}>{p}</button>)}</div>}
    <div className="chat-zone"><ChatMessageList align="top" density="compact">{msgs.map((m,i)=><ChatMessage key={i} sender={m.role==='user'?'user':'assistant'}><div className={`chat-bubble ${m.role==='user'?'chat-bubble-user':'chat-bubble-assistant'}`}>{m.text}</div></ChatMessage>)}</ChatMessageList></div>
    <div className="composer">
-     {msgs.length>0&&<div className="quick-prompts" aria-label="Preguntas rápidas">{prompts.map(p=><button key={p} onClick={()=>send(p)}>{p}</button>)}</div>}
+     {msgs.length>0&&<div className="quick-prompts-wrap"><div className="quick-prompts" aria-label="Preguntas rápidas">{prompts.map(p=><button key={p} onClick={()=>send(p)}>{p}</button>)}</div><div className="quick-prompts-cue" aria-hidden="true"><ArrowLeftRight size={18}/></div></div>}
      <ChatComposer value={draft} onChange={setDraft} onSubmit={send} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="spacious" elevation="low" sendActions={<ChatDictationButton dictation={dictation} size="md" isHiddenWhenUnsupported={false} label={dictation.isListening?'Detener dictado':'Hablar'}/>} sendButton={<button className="chat-send" type="button" onClick={()=>send(draft)} disabled={busy||!draft.trim()} aria-label="Enviar"><ArrowUp size={22}/></button>}/>
    </div>
  </section>
