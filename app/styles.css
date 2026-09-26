@@ -62,7 +62,7 @@ button{color:inherit}
 }
 .top h1{margin:5px 0 0;font-size:30px;line-height:1.02;letter-spacing:-1.4px}
 .eyebrow,.section-title span,.video-kicker,.scanner-card span{
-  font-size:9px;
+  font-size:12px;
   letter-spacing:.17em;
   font-weight:800;
   color:var(--accent);
@@ -95,7 +95,7 @@ button{color:inherit}
 .video-copy{position:absolute;z-index:2;left:24px;right:24px;bottom:24px;color:white}
 .video-kicker{color:#fff;opacity:.74}
 .video-copy h1{color:#fff;font-size:32px;line-height:1.01;letter-spacing:-1.5px;margin:8px 0 8px;max-width:480px;text-wrap:balance;text-shadow:0 1px 12px rgba(0,0,0,.18)}
-.video-copy p{margin:0;font-size:12px;color:rgba(255,255,255,.8)}
+.video-copy p{margin:0;font-size:16px;line-height:1.4;color:rgba(255,255,255,.88)}
 
 .primary-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;animation:section-enter 420ms 90ms ease-out both}
 .primary-action{
@@ -124,8 +124,8 @@ button{color:inherit}
 }
 .primary-action.activity>span{background:var(--accent-soft);color:#5b4fc0}
 .primary-action b,.primary-action small{display:block}
-.primary-action b{font-size:15px;font-weight:700;letter-spacing:-.3px}
-.primary-action small{font-size:12px;line-height:1.35;opacity:.8;margin-top:4px}
+.primary-action b{font-size:18px;font-weight:750;letter-spacing:-.35px}
+.primary-action small{font-size:14px;line-height:1.4;opacity:.86;margin-top:5px}
 .primary-action.load small{color:rgba(255,255,255,.74)}
 .primary-action>svg{transform:translateX(-1px)}
 
@@ -137,20 +137,20 @@ button{color:inherit}
   animation:section-enter 420ms 180ms ease-out both;
 }
 .month-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-.month-head span{font-size:9px;color:var(--muted)}
-.month-head strong{display:block;font-size:34px;letter-spacing:-1.7px;margin-top:4px;font-variant-numeric:tabular-nums}
+.month-head span{font-size:14px;color:var(--muted);font-weight:600}
+.month-head strong{display:block;font-size:38px;letter-spacing:-1.9px;margin-top:6px;font-variant-numeric:tabular-nums}
 .month-head button{
   border:0;border-radius:14px;background:var(--accent-soft);color:#5d50c8;
-  padding:10px 11px 10px 12px;display:flex;gap:6px;align-items:center;font-size:9px;font-weight:700;
+  padding:11px 13px;display:flex;gap:7px;align-items:center;font-size:13px;font-weight:750;
   box-shadow:0 0 0 1px oklch(0 0 0 / .03);
   transition-property:scale,background-color;transition-duration:150ms;transition-timing-function:ease-out;
 }
 .month-head button:hover{background:#e2dcff}.month-head button:active{scale:.96}
-.month-card p{font-size:11px;line-height:1.5;color:#625f67;margin:13px 0 0}
+.month-card p{font-size:16px;line-height:1.5;color:#56525b;margin:15px 0 0}
 
 .section-title{display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px;padding:0 2px}
-.section-title h2{font-size:20px;letter-spacing:-.72px;margin:4px 0 0}
-.section-title button{border:0;background:none;color:#625b70;font-size:10px;padding:8px 0 6px 10px;transition-property:opacity,color;transition-duration:120ms;transition-timing-function:ease-out}
+.section-title h2{font-size:24px;letter-spacing:-.8px;margin:5px 0 0}
+.section-title button{border:0;background:none;color:#625b70;font-size:14px;font-weight:650;padding:8px 0 6px 10px;transition-property:opacity,color;transition-duration:120ms;transition-timing-function:ease-out}
 .section-title button:hover{color:var(--ink)}
 
 .insight-grid{display:grid;gap:10px}
@@ -165,11 +165,11 @@ button{color:inherit}
 }
 .insight:hover{box-shadow:var(--shadow-border-hover)}
 .insight:active{scale:.96}
-.insight>span{font-size:9px;opacity:.45;padding-top:3px;font-variant-numeric:tabular-nums}
+.insight>span{font-size:12px;opacity:.5;padding-top:3px;font-variant-numeric:tabular-nums}
 .insight b,.insight strong,.insight p{display:block}
-.insight b{font-size:10px;font-weight:700}
-.insight strong{font-size:21px;letter-spacing:-.7px;margin-top:3px}
-.insight p{font-size:9px;line-height:1.4;margin:4px 0 0;color:#5f5d64}
+.insight b{font-size:15px;font-weight:750}
+.insight strong{font-size:25px;letter-spacing:-.8px;margin-top:5px}
+.insight p{font-size:14px;line-height:1.45;margin:6px 0 0;color:#55525a}
 .lavender{background:#ebe7ff}.mint{background:#e1f2e9}.peach{background:#ffe9de}
 
 .tx-list,.category-list,.repeat-card{
@@ -182,9 +182,9 @@ button{color:inherit}
 .tx:last-child{border-bottom:0}
 .tx-icon{width:42px;height:42px;border-radius:11px;background:#f1eee8;display:grid;place-items:center;color:#6e6973}
 .tx b,.tx small{display:block;min-width:0}
-.tx b{font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tx small{font-size:8px;color:#8a858c;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tx strong{font-size:10px;font-variant-numeric:tabular-nums}
+.tx b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx small{font-size:12px;line-height:1.35;color:#7f7a83;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx strong{font-size:15px;font-weight:750;font-variant-numeric:tabular-nums}
 
 .plain-summary span,.plain-summary small{font-size:12px;color:#7b7780;display:block}
 .plain-summary strong{font-size:35px;display:block;letter-spacing:-1.7px;margin:6px 0;font-variant-numeric:tabular-nums}
