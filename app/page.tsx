@@ -5,7 +5,7 @@ import {neutralTheme} from '@astryxdesign/theme-neutral/built';
 import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
 import {TextInput} from '@astryxdesign/core/TextInput';
-import {ChatComposer,ChatMessage,ChatMessageBubble,ChatMessageList} from '@astryxdesign/core/Chat';
+import {ChatComposer,ChatDictationButton,ChatMessage,ChatMessageBubble,ChatMessageList,useChatDictation} from '@astryxdesign/core/Chat';
 import {Activity as ActivityIcon,Camera,ChevronRight,CircleDollarSign,FileText,Home,Landmark,Mail,MessageCircleMore,Plus,ReceiptText,ScanLine,ShoppingBag,Sparkles,Upload,Wallet,WalletCards} from 'lucide-react';
 import {seedTransactions,type Tx} from './data';
 
@@ -33,13 +33,13 @@ export default function Page(){
  const scan=async(file:File)=>{setBusy(true);setNotice('Leyendo comprobante…');try{const image=await fileToDataUrl(file);const r=await fetch('/api/receipt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});const d=await r.json();if(!r.ok)throw new Error(d.error);const x=d.result;addTx({name:x.merchant||'Comprobante',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:x.paymentMethod||'Ticket escaneado',notes:x.notes||''});setNotice(`Listo: ${x.merchant||'comprobante'} · ${money(Number(x.amount)||0)}`)}catch(e){setNotice(e instanceof Error?e.message:'No pude leer el ticket.')}finally{setBusy(false)}};
  const pdf=async(file:File)=>{setBusy(true);setNotice('Analizando PDF…');try{const f=new FormData();f.append('file',file);const r=await fetch('/api/pdf',{method:'POST',body:f});const d=await r.json();if(!r.ok)throw new Error(d.error);const arr=Array.isArray(d.result.transactions)?d.result.transactions:[];arr.forEach((x:any)=>addTx({name:x.merchant||'Movimiento PDF',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:file.name,notes:x.notes||''}));setNotice(`${d.result.summary||'PDF analizado'}. Importé ${arr.length} movimientos.`)}catch(e){setNotice(e instanceof Error?e.message:'No pude analizar el PDF.')}finally{setBusy(false)}};
  return <Theme theme={neutralTheme} mode="light"><main className="shell">
-   {view!=='home'&&<header className="top"><div><span className="eyebrow">FINANZAS</span><h1>{view==='activity'?'Cómo va mi actividad':view==='add'?'Cargar':view==='accounts'?'Mis cuentas y fuentes':'Preguntá'}</h1></div><button className="account-btn" onClick={()=>setView('accounts')}><Wallet size={19}/></button></header>}
+   {view!=='home'&&<header className="top"><div><span className="eyebrow">FINANZAS</span><h1>{view==='activity'?'Cómo va mi actividad':view==='add'?'Cargar':view==='accounts'?'Mis cuentas y fuentes':'Asistente'}</h1></div><button className="account-btn" onClick={()=>setView('accounts')}><Wallet size={19}/></button></header>}
    {view==='home'&&<HomeView monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={setView}/>} 
    {view==='activity'&&<Activity txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
    {view==='add'&&<Add manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
    {view==='accounts'&&<Accounts go={setView}/>} 
    {view==='ask'&&<Ask msgs={msgs} ask={ask} busy={busy}/>} 
-   <nav className="nav"><Nav icon={Home} label="Inicio" active={view==='home'} click={()=>setView('home')}/><Nav icon={ActivityIcon} label="Actividad" active={view==='activity'} click={()=>setView('activity')}/><button className="plus" onClick={()=>setView('add')}><Plus size={24}/></button><Nav icon={WalletCards} label="Fuentes" active={view==='accounts'} click={()=>setView('accounts')}/><Nav icon={MessageCircleMore} label="Preguntá" active={view==='ask'} click={()=>setView('ask')}/></nav>
+   <nav className="nav"><Nav icon={Home} label="Inicio" active={view==='home'} click={()=>setView('home')}/><Nav icon={ActivityIcon} label="Actividad" active={view==='activity'} click={()=>setView('activity')}/><button className="plus" onClick={()=>setView('add')}><Plus size={24}/></button><Nav icon={WalletCards} label="Fuentes" active={view==='accounts'} click={()=>setView('accounts')}/><Nav icon={MessageCircleMore} label="Asistente" active={view==='ask'} click={()=>setView('ask')}/></nav>
  </main></Theme>
 }
 
@@ -98,7 +98,17 @@ function Add({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,bu
 
 function Accounts({go}:{go:(v:View)=>void}){const acc=[['Santander','Cuenta + Visa','$ 1.284.300','rose'],['Banco Galicia','Caja de ahorro','$ 842.900','orange'],['BBVA','Mastercard','$ 386.120','blue'],['Mercado Pago','Billetera','$ 214.800','cyan'],['Ualá','Billetera','$ 98.700','violet']];return <section className="stack"><p className="lead">Reuní cuentas, tarjetas y billeteras para entender tu situación completa.</p>{acc.map(a=><button className={`account ${a[3]}`} key={a[0]}><span><Landmark/></span><div><b>{a[0]}</b><small>{a[1]}</small></div><strong>{a[2]}</strong><ChevronRight/></button>)}<Button label="Agregar otra fuente" variant="primary" width="100%" onClick={()=>go('add')}/></section>}
 
-function Ask({msgs,ask,busy}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean}){const prompts=['¿En qué estoy gastando de más?','¿Cuánto gasté en IA estos tres meses?','¿Qué pagos se repiten todos los meses?','¿Cuánto necesito para la primera semana de octubre?'];return <section className="ask"><div className="ask-intro"><span><Sparkles/></span><h2>Preguntale a tus números.</h2><p>Usa tus movimientos, fechas, categorías y gastos recurrentes para responderte en lenguaje simple.</p></div><div className="prompt-grid">{prompts.map(p=><Button key={p} label={p} variant="secondary" size="sm" onClick={()=>ask(p)}/>)}</div><div className="chat-zone"><ChatMessageList align="top" density="compact">{msgs.map((m,i)=><ChatMessage key={i} sender={m.role==='user'?'user':'assistant'}><ChatMessageBubble>{m.text}</ChatMessageBubble></ChatMessage>)}</ChatMessageList></div><div className="composer"><ChatComposer onSubmit={ask} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="balanced" elevation="low"/></div></section>}
+function Ask({msgs,ask,busy}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean}){
+ const prompts=['¿En qué estoy gastando de más?','¿Qué pagos se repiten todos los meses?','¿Cuánto gasté en IA estos tres meses?','¿Qué tengo que pagar esta semana?'];
+ const [draft,setDraft]=useState('');
+ const dictation=useChatDictation({lang:'es-AR',continuous:false,interimResults:true,onTranscript:(text)=>setDraft(text),onResult:(text)=>{const q=text.trim();if(q){setDraft(q);ask(q)}}});
+ return <section className="ask">
+   <div className="ask-intro"><span><Sparkles/></span><h2>Hablá con tus finanzas.</h2><p>Escribí o tocá el micrófono y preguntá como hablarías con una persona.</p></div>
+   <div className="prompt-grid">{prompts.map(p=><button className="prompt-chip" key={p} onClick={()=>ask(p)}>{p}</button>)}</div>
+   <div className="chat-zone"><ChatMessageList align="top" density="compact">{msgs.map((m,i)=><ChatMessage key={i} sender={m.role==='user'?'user':'assistant'}><ChatMessageBubble>{m.text}</ChatMessageBubble></ChatMessage>)}</ChatMessageList></div>
+   <div className="composer"><ChatComposer value={draft} onChange={setDraft} onSubmit={(value)=>{const q=value.trim();if(!q)return;setDraft('');ask(q)}} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="spacious" elevation="low" sendActions={<ChatDictationButton dictation={dictation} size="md" isHiddenWhenUnsupported={false} label={dictation.isListening?'Detener dictado':'Hablar'}/>}/></div>
+ </section>
+}
 
 function Source({icon:Icon,title,copy,click}:{icon:any;title:string;copy:string;click:()=>void}){return <button className="source" onClick={click}><span><Icon/></span><b>{title}</b><small>{copy}</small></button>}
 function Nav({icon:Icon,label,active,click}:{icon:any;label:string;active:boolean;click:()=>void}){return <button className={active?'active':''} onClick={click}><Icon size={19}/><span>{label}</span></button>}
