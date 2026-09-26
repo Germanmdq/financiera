@@ -1,183 +1,286 @@
 'use client';
+
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {Theme} from '@astryxdesign/core/theme';
-import {neutralTheme} from '@astryxdesign/theme-neutral/built';
-import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
-import {TextInput} from '@astryxdesign/core/TextInput';
-import {ChatComposer,ChatDictationButton,ChatMessage,ChatMessageBubble,ChatMessageList,useChatDictation} from '@astryxdesign/core/Chat';
-import {Activity as ActivityIcon,ArrowLeftRight,ArrowUp,Camera,ChevronRight,CircleDollarSign,FileText,Home,Landmark,Mail,MessageCircleMore,Plus,ReceiptText,ScanLine,ShoppingBag,Sparkles,Upload,Wallet,WalletCards} from 'lucide-react';
+import {ChatComposer,ChatDictationButton,useChatDictation} from '@astryxdesign/core/Chat';
+import {
+  Activity as ActivityIcon,
+  ArrowUp,
+  Camera,
+  ChevronDown,
+  ChevronRight,
+  CircleDollarSign,
+  FileText,
+  Home,
+  Landmark,
+  Mail,
+  Menu,
+  MessageCircleMore,
+  Plus,
+  ReceiptText,
+  ScanLine,
+  Search,
+  ShoppingBag,
+  Sparkles,
+  Wallet,
+  WalletCards,
+  X,
+} from 'lucide-react';
 import {seedTransactions,type Tx} from './data';
 
 type View='home'|'activity'|'add'|'accounts';
 type Msg={role:'user'|'assistant',text:string};
+
 const money=(n:number)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n);
 const currentMonth='2026-09';
 const previousMonth='2026-08';
 
 export default function Page(){
- const [view,setView]=useState<View>('home');
- const [agentOpen,setAgentOpen]=useState(false);
- const [txs,setTxs]=useState<Tx[]>(seedTransactions);
- const [msgs,setMsgs]=useState<Msg[]>([]);
- const [busy,setBusy]=useState(false);
- const [notice,setNotice]=useState('');
- const [manual,setManual]=useState({name:'',amount:'',category:'',source:'Efectivo'});
- const scanRef=useRef<HTMLInputElement>(null); const pdfRef=useRef<HTMLInputElement>(null);
- useEffect(()=>{const saved=localStorage.getItem('finanzas.txs.v2'); if(saved) try{setTxs(JSON.parse(saved))}catch{}},[]);
- useEffect(()=>{localStorage.setItem('finanzas.txs.v2',JSON.stringify(txs))},[txs]);
- const monthTxs=useMemo(()=>txs.filter(t=>t.date.startsWith(currentMonth)),[txs]);
- const monthTotal=useMemo(()=>monthTxs.reduce((s,t)=>s+t.amount,0),[monthTxs]);
- const previousTotal=useMemo(()=>txs.filter(t=>t.date.startsWith(previousMonth)).reduce((s,t)=>s+t.amount,0),[txs]);
- const addTx=(t:Omit<Tx,'id'>)=>setTxs(v=>[{...t,id:crypto.randomUUID()},...v]);
- const ask=async(q:string)=>{
-   const clean=q.trim(); if(!clean||busy)return;
-   setMsgs(v=>[...v,{role:'user',text:clean}]);
-   const n=clean.toLocaleLowerCase('es-AR');
-   const action=(target:View,label:string)=>{setView(target);setMsgs(v=>[...v,{role:'assistant',text:`Listo. Abrí ${label}.`}]);};
-   if(/\b(cargar|carga|agregar gasto|nuevo gasto|sumar gasto)\b/.test(n)){action('add','Cargar');return;}
-   if(/\b(actividad|resumen|cómo voy|como voy|qué gasté|que gaste)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('activity','Cómo va mi actividad');return;}
-   if(/\b(cuentas|fuentes|tarjetas|billeteras|bancos)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('accounts','Mis cuentas y fuentes');return;}
-   setBusy(true);try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:clean,context:{today:'2026-09-26',currentScreen:view,transactions:txs,summary:{monthTotal,previousTotal,upcoming:[{name:'Visa Santander',date:'2026-10-03',amount:684320},{name:'Colegio San José',date:'2026-10-05',amount:185000},{name:'Servicios',date:'2026-10-08',amount:90170}]}}})});const d=await r.json();setMsgs(v=>[...v,{role:'assistant',text:d.answer||d.error||'No pude responder.'}])}catch{setMsgs(v=>[...v,{role:'assistant',text:'No pude conectar con el servidor.'}])}finally{setBusy(false)}
- };
- const scan=async(file:File)=>{setBusy(true);setNotice('Leyendo comprobante…');try{const image=await fileToDataUrl(file);const r=await fetch('/api/receipt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});const d=await r.json();if(!r.ok)throw new Error(d.error);const x=d.result;addTx({name:x.merchant||'Comprobante',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:x.paymentMethod||'Ticket escaneado',notes:x.notes||''});setNotice(`Listo: ${x.merchant||'comprobante'} · ${money(Number(x.amount)||0)}`)}catch(e){setNotice(e instanceof Error?e.message:'No pude leer el ticket.')}finally{setBusy(false)}};
- const pdf=async(file:File)=>{setBusy(true);setNotice('Analizando PDF…');try{const f=new FormData();f.append('file',file);const r=await fetch('/api/pdf',{method:'POST',body:f});const d=await r.json();if(!r.ok)throw new Error(d.error);const arr=Array.isArray(d.result.transactions)?d.result.transactions:[];arr.forEach((x:any)=>addTx({name:x.merchant||'Movimiento PDF',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:file.name,notes:x.notes||''}));setNotice(`${d.result.summary||'PDF analizado'}. Importé ${arr.length} movimientos.`)}catch(e){setNotice(e instanceof Error?e.message:'No pude analizar el PDF.')}finally{setBusy(false)}};
- return <Theme theme={neutralTheme} mode="light"><div className="app-shell">
-   <aside className="desktop-sidebar">
-     <div className="desktop-brand"><span>FINANZAS</span><strong>Cifra</strong></div>
-     <div className="desktop-menu">
-       <button className={view==='home'?'active':''} onClick={()=>setView('home')}><Home size={19}/><span>Inicio</span></button>
-       <button className={view==='activity'?'active':''} onClick={()=>setView('activity')}><ActivityIcon size={19}/><span>Actividad</span></button>
-       <button className={view==='add'?'active':''} onClick={()=>setView('add')}><Plus size={19}/><span>Cargar</span></button>
-       <button className={view==='accounts'?'active':''} onClick={()=>setView('accounts')}><WalletCards size={19}/><span>Fuentes</span></button>
-     </div>
-     <button className="desktop-agent" onClick={()=>setAgentOpen(true)}><Sparkles size={19}/><div><b>Asistente</b><small>Preguntá o pedile una acción</small></div></button>
-   </aside>
-   <main className="shell">
-     <header className="desktop-topbar"><div><span>FINANZAS PERSONALES</span><h1>{view==='home'?'Panel general':view==='activity'?'Cómo va mi actividad':view==='add'?'Cargar':'Mis cuentas y fuentes'}</h1></div><button className="account-btn" onClick={()=>setView('accounts')}><Wallet size={19}/></button></header>
-     {view!=='home'&&<header className="top mobile-only"><div><span className="eyebrow">FINANZAS</span><h1>{view==='activity'?'Cómo va mi actividad':view==='add'?'Cargar':'Mis cuentas y fuentes'}</h1></div><button className="account-btn" onClick={()=>setView('accounts')}><Wallet size={19}/></button></header>}
-     {view==='home'&&<HomeView monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={setView} openAgent={()=>setAgentOpen(true)}/>} 
-     {view==='activity'&&<Activity txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
-     {view==='add'&&<Add manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
-     {view==='accounts'&&<Accounts go={setView}/>} 
-     <button className={`agent-fab ${agentOpen?'agent-fab-open':''}`} onClick={()=>setAgentOpen(v=>!v)} aria-label="Abrir asistente"><Sparkles size={20}/><span>Asistente</span></button>
-     {agentOpen&&<><button className="agent-backdrop" aria-label="Cerrar asistente" onClick={()=>setAgentOpen(false)}/><section className="agent-panel"><div className="agent-panel-head"><div><span>ASISTENTE</span><h2>¿Qué querés hacer?</h2></div><button onClick={()=>setAgentOpen(false)} aria-label="Cerrar">×</button></div><Ask msgs={msgs} ask={ask} busy={busy} panel/></section></>}
-     <nav className="nav"><Nav icon={Home} label="Inicio" active={view==='home'} click={()=>setView('home')}/><Nav icon={ActivityIcon} label="Actividad" active={view==='activity'} click={()=>setView('activity')}/><button className="plus" onClick={()=>setView('add')}><Plus size={24}/></button><Nav icon={WalletCards} label="Fuentes" active={view==='accounts'} click={()=>setView('accounts')}/><Nav icon={MessageCircleMore} label="Asistente" active={agentOpen} click={()=>setAgentOpen(true)}/></nav>
-   </main>
- </div></Theme>
-}
+  const [view,setView]=useState<View>('home');
+  const [agentOpen,setAgentOpen]=useState(false);
+  const [sidebarOpen,setSidebarOpen]=useState(false);
+  const [txs,setTxs]=useState<Tx[]>(seedTransactions);
+  const [msgs,setMsgs]=useState<Msg[]>([]);
+  const [busy,setBusy]=useState(false);
+  const [notice,setNotice]=useState('');
+  const [manual,setManual]=useState({name:'',amount:'',category:'',source:'Efectivo'});
+  const scanRef=useRef<HTMLInputElement>(null);
+  const pdfRef=useRef<HTMLInputElement>(null);
 
-function HomeView({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number;previousTotal:number;txs:Tx[];go:(v:View)=>void;openAgent:()=>void}){
- const [videoOk,setVideoOk]=useState(false);
- const delta=previousTotal?Math.round(((monthTotal-previousTotal)/previousTotal)*100):0;
- const top=Object.entries(txs.filter(t=>t.date.startsWith(currentMonth)).reduce<Record<string,number>>((a,t)=>{a[t.category]=(a[t.category]||0)+t.amount;return a},{})).sort((a,b)=>b[1]-a[1]).slice(0,3);
- return <section className="home-stack">
-   <div className="home-top-grid">
-    <div className={`video-hero ${videoOk?'':'video-fallback'}`}>
-      <video autoPlay muted playsInline loop preload="metadata" src="/intro-finanzas.mp4" onCanPlay={()=>setVideoOk(true)} onError={()=>setVideoOk(false)}/>
-      {videoOk?<div className="video-shade"/>:<div className="hero-summary">
-        <span>RESUMEN DE SEPTIEMBRE</span>
-        <strong>{money(monthTotal)}</strong>
-        <p>{txs.filter(t=>t.date.startsWith(currentMonth)).length} movimientos cargados hasta hoy.</p>
-        <div className="hero-summary-grid">
-          <div><small>Próximo vencimiento</small><b>03 oct · Visa Santander</b><strong>$ 684.320</strong></div>
-          <div><small>Mayor rubro</small><b>{top[0]?.[0]||'—'}</b><strong>{top[0]?money(top[0][1]):'Sin datos'}</strong></div>
+  useEffect(()=>{const saved=localStorage.getItem('finanzas.txs.v2');if(saved)try{setTxs(JSON.parse(saved))}catch{}},[]);
+  useEffect(()=>{localStorage.setItem('finanzas.txs.v2',JSON.stringify(txs))},[txs]);
+
+  const monthTxs=useMemo(()=>txs.filter(t=>t.date.startsWith(currentMonth)),[txs]);
+  const monthTotal=useMemo(()=>monthTxs.reduce((s,t)=>s+t.amount,0),[monthTxs]);
+  const previousTotal=useMemo(()=>txs.filter(t=>t.date.startsWith(previousMonth)).reduce((s,t)=>s+t.amount,0),[txs]);
+  const addTx=(t:Omit<Tx,'id'>)=>setTxs(v=>[{...t,id:crypto.randomUUID()},...v]);
+
+  const navigate=(next:View)=>{setView(next);setSidebarOpen(false)};
+
+  const ask=async(q:string)=>{
+    const clean=q.trim();
+    if(!clean||busy)return;
+    setMsgs(v=>[...v,{role:'user',text:clean}]);
+    const n=clean.toLocaleLowerCase('es-AR');
+    const action=(target:View,label:string)=>{setView(target);setMsgs(v=>[...v,{role:'assistant',text:`Listo. Abrí ${label}.`}]);};
+    if(/\b(cargar|carga|agregar gasto|nuevo gasto|sumar gasto)\b/.test(n)){action('add','Cargar');return;}
+    if(/\b(actividad|resumen|cómo voy|como voy|qué gasté|que gaste)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('activity','Actividad');return;}
+    if(/\b(cuentas|fuentes|tarjetas|billeteras|bancos)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('accounts','Fuentes');return;}
+    setBusy(true);
+    try{
+      const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:clean,context:{today:'2026-09-26',currentScreen:view,transactions:txs,summary:{monthTotal,previousTotal,upcoming:[{name:'Visa Santander',date:'2026-10-03',amount:684320},{name:'Colegio San José',date:'2026-10-05',amount:185000},{name:'Servicios',date:'2026-10-08',amount:90170}]}}})});
+      const d=await r.json();
+      setMsgs(v=>[...v,{role:'assistant',text:d.answer||d.error||'No pude responder.'}]);
+    }catch{setMsgs(v=>[...v,{role:'assistant',text:'No pude conectar con el servidor.'}]);}
+    finally{setBusy(false)}
+  };
+
+  const scan=async(file:File)=>{
+    setBusy(true);setNotice('Leyendo comprobante…');
+    try{
+      const image=await fileToDataUrl(file);
+      const r=await fetch('/api/receipt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});
+      const d=await r.json();if(!r.ok)throw new Error(d.error);
+      const x=d.result;
+      addTx({name:x.merchant||'Comprobante',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:x.paymentMethod||'Ticket escaneado',notes:x.notes||''});
+      setNotice(`Listo: ${x.merchant||'comprobante'} · ${money(Number(x.amount)||0)}`);
+    }catch(e){setNotice(e instanceof Error?e.message:'No pude leer el ticket.')}finally{setBusy(false)}
+  };
+
+  const pdf=async(file:File)=>{
+    setBusy(true);setNotice('Analizando PDF…');
+    try{
+      const f=new FormData();f.append('file',file);
+      const r=await fetch('/api/pdf',{method:'POST',body:f});
+      const d=await r.json();if(!r.ok)throw new Error(d.error);
+      const arr=Array.isArray(d.result.transactions)?d.result.transactions:[];
+      arr.forEach((x:any)=>addTx({name:x.merchant||'Movimiento PDF',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:file.name,notes:x.notes||''}));
+      setNotice(`${d.result.summary||'PDF analizado'}. Importé ${arr.length} movimientos.`);
+    }catch(e){setNotice(e instanceof Error?e.message:'No pude analizar el PDF.')}finally{setBusy(false)}
+  };
+
+  const title=view==='home'?'Panel general':view==='activity'?'Actividad':view==='add'?'Cargar':'Fuentes';
+
+  return <div className="sd-app">
+    <button className={`sd-mobile-backdrop ${sidebarOpen?'show':''}`} onClick={()=>setSidebarOpen(false)} aria-label="Cerrar menú"/>
+    <aside className={`sd-sidebar ${sidebarOpen?'open':''}`}>
+      <div className="sd-sidebar-head">
+        <div className="sd-brand-mark">C</div>
+        <div className="sd-brand-copy"><strong>Cifra</strong><span>Finanzas personales</span></div>
+        <button className="sd-sidebar-close" onClick={()=>setSidebarOpen(false)} aria-label="Cerrar"><X size={18}/></button>
+      </div>
+
+      <nav className="sd-nav">
+        <span className="sd-nav-label">GENERAL</span>
+        <NavItem icon={Home} label="Inicio" active={view==='home'} onClick={()=>navigate('home')}/>
+        <NavItem icon={ActivityIcon} label="Actividad" active={view==='activity'} onClick={()=>navigate('activity')}/>
+        <NavItem icon={Plus} label="Cargar" active={view==='add'} onClick={()=>navigate('add')}/>
+        <NavItem icon={WalletCards} label="Fuentes" active={view==='accounts'} onClick={()=>navigate('accounts')}/>
+      </nav>
+
+      <div className="sd-sidebar-spacer"/>
+      <button className="sd-assistant-nav" onClick={()=>{setAgentOpen(true);setSidebarOpen(false)}}>
+        <span><Sparkles size={17}/></span>
+        <div><b>Asistente</b><small>Preguntá o pedí una acción</small></div>
+        <ChevronRight size={16}/>
+      </button>
+    </aside>
+
+    <main className="sd-inset">
+      <header className="sd-header">
+        <div className="sd-header-left">
+          <button className="sd-icon-button sd-menu-button" onClick={()=>setSidebarOpen(true)} aria-label="Abrir menú"><Menu size={19}/></button>
+          <div className="sd-header-title"><span>FINANZAS</span><strong>{title}</strong></div>
         </div>
-        <div className="hero-summary-actions"><button onClick={()=>go('activity')}>Ver actividad</button><button onClick={openAgent}>Preguntar al asistente</button></div>
-      </div>}
+        <div className="sd-header-actions">
+          <div className="sd-search"><Search size={16}/><span>Buscar</span><kbd>⌘ K</kbd></div>
+          <button className="sd-icon-button" onClick={()=>navigate('accounts')} aria-label="Fuentes"><Wallet size={18}/></button>
+        </div>
+      </header>
+
+      <div className="sd-page"><div className="sd-container">
+        {view==='home'&&<DashboardHome monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={navigate} openAgent={()=>setAgentOpen(true)}/>} 
+        {view==='activity'&&<ActivityView txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
+        {view==='add'&&<AddView manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
+        {view==='accounts'&&<AccountsView go={navigate}/>} 
+      </div></div>
+    </main>
+
+    <button className="sd-agent-fab" onClick={()=>setAgentOpen(true)}><Sparkles size={18}/><span>Asistente</span></button>
+    {agentOpen&&<AgentPanel msgs={msgs} ask={ask} busy={busy} close={()=>setAgentOpen(false)}/>} 
+  </div>
+}
+
+function DashboardHome({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number;previousTotal:number;txs:Tx[];go:(v:View)=>void;openAgent:()=>void}){
+  const current=txs.filter(t=>t.date.startsWith(currentMonth));
+  const delta=previousTotal?Math.round(((monthTotal-previousTotal)/previousTotal)*100):0;
+  const categories=categorySummary(current).slice(0,6);
+  return <section className="sd-stack">
+    <div className="sd-overview-head">
+      <div><h1>Resumen de septiembre</h1><p>Información actualizada con tus movimientos cargados.</p></div>
+      <div className="sd-overview-actions"><button className="sd-btn secondary" onClick={()=>go('activity')}>Ver actividad</button><button className="sd-btn primary" onClick={()=>go('add')}><Plus size={15}/> Cargar movimiento</button></div>
     </div>
-     <div className="home-rail">
-       <div className="primary-actions">
-         <button className="primary-action load" onClick={()=>go('add')}><span><ScanLine/></span><div><b>Cargar</b><small>Ticket, PDF, gasto o cuenta</small></div><ChevronRight/></button>
-         <button className="primary-action activity" onClick={()=>go('activity')}><span><ActivityIcon/></span><div><b>Cómo va mi actividad</b><small>Qué gastaste y qué está cambiando</small></div><ChevronRight/></button>
-       </div>
-       <section className="month-card"><div className="month-head"><div><span>Septiembre hasta hoy</span><strong>{money(monthTotal)}</strong></div><button onClick={openAgent}><Sparkles size={16}/> Preguntar</button></div><p>{delta>=0?`Llevás ${Math.abs(delta)}% más que en agosto.`:`Llevás ${Math.abs(delta)}% menos que en agosto.`} Lo importante no es una barra: es entender por qué.</p></section>
-     </div>
-   </div>
-   <div className="dashboard-metrics">
-     <article className="metric-card"><span>Este mes</span><strong>{money(monthTotal)}</strong><small>{txs.filter(t=>t.date.startsWith(currentMonth)).length} movimientos</small></article>
-     <article className="metric-card"><span>Vs. agosto</span><strong>{delta>=0?'+':''}{delta}%</strong><small>{delta>=0?'más gasto':'menos gasto'} que el mes pasado</small></article>
-     <article className="metric-card"><span>Mayor rubro</span><strong>{top[0]?.[0]||'—'}</strong><small>{top[0]?money(top[0][1]):'Sin datos'}</small></article>
-     <article className="metric-card accent"><span>Antes del 8 oct</span><strong>$ 959.490</strong><small>Visa, colegio y servicios</small></article>
-   </div>
-   <div className="home-bottom-grid">
-     <div className="home-movements">
-       <div className="panel-heading"><div><span>ACTIVIDAD RECIENTE</span><h2>Últimos movimientos</h2></div><button onClick={()=>go('activity')}>Ver actividad</button></div>
-       <TxList items={txs.slice(0,6)}/>
-     </div>
-     <div className="home-side-stack">
-       <aside className="upcoming-card">
-         <span>PRÓXIMOS PAGOS</span>
-         <h3>Lo que viene ahora</h3>
-         <div><b>03 oct</b><p>Visa Santander</p><strong>$ 684.320</strong></div>
-         <div><b>05 oct</b><p>Colegio San José</p><strong>$ 185.000</strong></div>
-         <div><b>08 oct</b><p>Servicios</p><strong>$ 90.170</strong></div>
-       </aside>
-       <aside className="assistant-card">
-         <div className="assistant-card-icon"><Sparkles size={20}/></div>
-         <div><span>ASISTENTE</span><h3>Preguntale a tus números.</h3><p>Podés pedirle que encuentre gastos, compare meses o te lleve a una sección.</p></div>
-         <button onClick={openAgent}>Abrir asistente <ChevronRight size={16}/></button>
-       </aside>
-     </div>
-   </div>
- </section>
+
+    <div className="sd-kpi-grid">
+      <Metric title="Gastado este mes" value={money(monthTotal)} note={`${current.length} movimientos`} />
+      <Metric title="Comparación mensual" value={`${delta>=0?'+':''}${delta}%`} note={`Agosto: ${money(previousTotal)}`} />
+      <Metric title="Próximos pagos" value="$ 959.490" note="Hasta el 8 de octubre" />
+      <Metric title="Mayor categoría" value={categories[0]?.category||'—'} note={categories[0]?money(categories[0].total):'Sin datos'} />
+    </div>
+
+    <div className="sd-dashboard-grid">
+      <section className="sd-card sd-card-large">
+        <CardHead title="Actividad por categoría" subtitle="Septiembre" action={<button onClick={()=>go('activity')}>Ver todo</button>}/>
+        <div className="sd-category-table">
+          {categories.map((c,i)=><div className="sd-category-table-row" key={c.category}>
+            <span className="sd-rank">{String(i+1).padStart(2,'0')}</span>
+            <div><b>{c.category}</b><small>{c.count} movimiento{c.count===1?'':'s'}</small></div>
+            <strong>{money(c.total)}</strong>
+          </div>)}
+        </div>
+      </section>
+
+      <section className="sd-card">
+        <CardHead title="Próximos pagos" subtitle="Próximos 12 días"/>
+        <div className="sd-payment-list">
+          <Payment date="03 oct" name="Visa Santander" amount="$ 684.320"/>
+          <Payment date="05 oct" name="Colegio San José" amount="$ 185.000"/>
+          <Payment date="08 oct" name="Servicios" amount="$ 90.170"/>
+        </div>
+      </section>
+    </div>
+
+    <section className="sd-card">
+      <CardHead title="Movimientos" subtitle="Agrupados por categoría" action={<button onClick={()=>go('activity')}>Abrir actividad</button>}/>
+      <CategorizedTxList items={txs}/>
+    </section>
+
+    <section className="sd-assistant-strip">
+      <div><span><Sparkles size={17}/></span><div><b>Asistente</b><small>Encontrá gastos, compará meses o pedile que abra una sección.</small></div></div>
+      <button className="sd-btn primary" onClick={openAgent}>Abrir asistente</button>
+    </section>
+  </section>
 }
 
-function Activity({txs,monthTotal,previousTotal}:{txs:Tx[];monthTotal:number;previousTotal:number}){
- const current=txs.filter(t=>t.date.startsWith(currentMonth));
- const categories=Object.entries(current.reduce<Record<string,number>>((a,t)=>{a[t.category]=(a[t.category]||0)+t.amount;return a},{})).sort((a,b)=>b[1]-a[1]).slice(0,5);
- const recurring=['Colegio San José','Netflix','Spotify','OpenAI','Claude','Flow','Personal','Sancor Seguros','EDEA','Camuzzi'];
- return <section className="stack activity-stack">
-   <div className="activity-top-grid"><Card padding={4}><div className="plain-summary"><span>GASTADO ESTE MES</span><strong>{money(monthTotal)}</strong><small>{current.length} movimientos · agosto {money(previousTotal)}</small></div></Card></div>
-   <div className="activity-panels"><div><div className="section-title"><div><span>DONDE MÁS SE FUE</span><h2>Principales rubros</h2></div></div><div className="category-list">{categories.map(([name,amount],i)=><div className="category-row" key={name}><span>{String(i+1).padStart(2,'0')}</span><div><b>{name}</b><small>{current.filter(t=>t.category===name).length} movimientos</small></div><strong>{money(amount)}</strong></div>)}</div></div><div><div className="section-title"><div><span>SE REPITEN</span><h2>Gastos fijos y suscripciones</h2></div></div><div className="repeat-card">{recurring.map(name=>{const hit=current.find(t=>t.name===name);return hit?<div key={name}><b>{name}</b><span>{money(hit.amount)}</span></div>:null})}</div></div></div>
-   <div className="section-title"><div><span>HISTORIAL</span><h2>Todos los movimientos</h2></div></div>
-   <CategorizedTxList items={txs}/>
- </section>
+function ActivityView({txs,monthTotal,previousTotal}:{txs:Tx[];monthTotal:number;previousTotal:number}){
+  const current=txs.filter(t=>t.date.startsWith(currentMonth));
+  const categories=categorySummary(current);
+  const delta=previousTotal?Math.round(((monthTotal-previousTotal)/previousTotal)*100):0;
+  return <section className="sd-stack">
+    <div className="sd-overview-head"><div><h1>Actividad</h1><p>Detalle de gastos, categorías y recurrencias.</p></div></div>
+    <div className="sd-kpi-grid compact">
+      <Metric title="Septiembre" value={money(monthTotal)} note={`${current.length} movimientos`} />
+      <Metric title="Agosto" value={money(previousTotal)} note="Mes anterior" />
+      <Metric title="Variación" value={`${delta>=0?'+':''}${delta}%`} note="Contra agosto" />
+      <Metric title="Categorías" value={String(categories.length)} note="Con movimientos" />
+    </div>
+    <div className="sd-dashboard-grid">
+      <section className="sd-card sd-card-large"><CardHead title="Principales categorías" subtitle="Ordenadas por importe"/><div className="sd-category-table">{categories.slice(0,8).map((c,i)=><div className="sd-category-table-row" key={c.category}><span className="sd-rank">{String(i+1).padStart(2,'0')}</span><div><b>{c.category}</b><small>{c.count} movimientos</small></div><strong>{money(c.total)}</strong></div>)}</div></section>
+      <section className="sd-card"><CardHead title="Gastos recurrentes" subtitle="Septiembre"/><div className="sd-simple-list">{['Colegio San José','Netflix','Spotify','OpenAI','Claude','Flow','Personal','Sancor Seguros','EDEA','Camuzzi'].map(name=>{const hit=current.find(t=>t.name===name);return hit?<div key={name}><span>{name}</span><b>{money(hit.amount)}</b></div>:null})}</div></section>
+    </div>
+    <section className="sd-card"><CardHead title="Todos los movimientos" subtitle="Abrí una categoría para ver el detalle"/><CategorizedTxList items={txs}/></section>
+  </section>
 }
 
-function TxList({items}:{items:Tx[]}){return <div className="tx-list">{items.map(t=><div className="tx" key={t.id}><span className="tx-icon"><ShoppingBag size={17}/></span><div><b>{t.name}</b><small>{new Date(t.date+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short'})} · {t.category} · {t.source}</small></div><strong>{money(t.amount)}</strong></div>)}</div>}
+function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){
+  return <section className="sd-stack">
+    <div className="sd-overview-head"><div><h1>Cargar</h1><p>Agregá movimientos desde ticket, PDF, banco o carga manual.</p></div></div>
+    <div className="sd-dashboard-grid add-grid">
+      <section className="sd-card sd-scan-card" onClick={()=>scanRef.current?.click()} role="button" tabIndex={0}>
+        <div className="sd-scan-icon"><ScanLine size={24}/></div><h2>Escanear ticket</h2><p>Usá la cámara para leer comercio, fecha, importe y forma de pago.</p><button className="sd-btn primary"><Camera size={15}/> Abrir cámara</button>
+      </section>
+      <section className="sd-card"><CardHead title="Otras formas de carga" subtitle="Elegí una opción"/><div className="sd-source-grid">
+        <Source icon={FileText} title="Subir PDF" copy="Resumen o factura" click={()=>pdfRef.current?.click()}/>
+        <Source icon={CircleDollarSign} title="Carga manual" copy="Efectivo o gasto rápido" click={()=>document.getElementById('manual')?.scrollIntoView({behavior:'smooth'})}/>
+        <Source icon={Mail} title="Mail" copy="Facturas y comprobantes" click={()=>setNotice('La conexión con Gmail/Outlook se habilita con autorización OAuth.')}/>
+        <Source icon={Landmark} title="Banco" copy="Cuentas y tarjetas" click={()=>setNotice('La conexión bancaria necesita autorización segura del proveedor.')}/>
+        <Source icon={Wallet} title="Billetera" copy="Mercado Pago, Ualá y más" click={()=>setNotice('La conexión de billeteras queda preparada para autorización.')}/>
+        <Source icon={ReceiptText} title="Factura / QR" copy="Leer con cámara" click={()=>scanRef.current?.click()}/>
+      </div></section>
+    </div>
+    <input ref={scanRef} hidden type="file" accept="image/*" capture="environment" onChange={e=>e.target.files?.[0]&&scan(e.target.files[0])}/>
+    <input ref={pdfRef} hidden type="file" accept="application/pdf" onChange={e=>e.target.files?.[0]&&pdf(e.target.files[0])}/>
+    {notice&&<div className="sd-notice">{busy?'Procesando… ':''}{notice}</div>}
+    <section className="sd-card" id="manual"><CardHead title="Carga manual" subtitle="Ingresá los datos del movimiento"/><div className="sd-form-grid">
+      <Field label="Concepto" value={manual.name} onChange={v=>setManual({...manual,name:v})}/>
+      <Field label="Importe" value={manual.amount} onChange={v=>setManual({...manual,amount:v})}/>
+      <Field label="Categoría" value={manual.category} onChange={v=>setManual({...manual,category:v})}/>
+      <Field label="Origen" value={manual.source} onChange={v=>setManual({...manual,source:v})}/>
+    </div><div className="sd-form-actions"><button className="sd-btn primary" onClick={()=>{if(!manual.name||!manual.amount)return;addTx({name:manual.name,amount:Number(String(manual.amount).replace(/\D/g,'')),date:new Date().toISOString().slice(0,10),category:manual.category||'Otros',source:manual.source});setManual({name:'',amount:'',category:'',source:'Efectivo'})}}>Guardar movimiento</button></div></section>
+  </section>
+}
+
+function AccountsView({go}:{go:(v:View)=>void}){
+  const accounts=[['Santander','Cuenta + Visa','$ 1.284.300'],['Banco Galicia','Caja de ahorro','$ 842.900'],['BBVA','Mastercard','$ 386.120'],['Mercado Pago','Billetera','$ 214.800'],['Ualá','Billetera','$ 98.700']];
+  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Fuentes</h1><p>Cuentas, tarjetas y billeteras conectadas.</p></div><button className="sd-btn primary" onClick={()=>go('add')}><Plus size={15}/> Agregar fuente</button></div><section className="sd-card"><CardHead title="Mis cuentas" subtitle={`${accounts.length} fuentes`}/><div className="sd-account-table">{accounts.map(([name,type,balance])=><button key={name} className="sd-account-row"><span className="sd-account-icon"><Landmark size={17}/></span><div><b>{name}</b><small>{type}</small></div><strong>{balance}</strong><ChevronRight size={16}/></button>)}</div></section></section>
+}
+
+function AgentPanel({msgs,ask,busy,close}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean;close:()=>void}){
+  const prompts=['¿En qué estoy gastando de más?','¿Qué pagos se repiten todos los meses?','¿Cuánto gasté en IA estos tres meses?','¿Qué tengo que pagar esta semana?'];
+  const [draft,setDraft]=useState('');
+  const ignoreVoiceTranscript=useRef(false);
+  const send=(raw:string)=>{const q=raw.trim();if(!q||busy)return;setDraft('');ask(q);setTimeout(()=>setDraft(''),0)};
+  const dictation=useChatDictation({lang:'es-AR',continuous:false,interimResults:true,onStart:()=>{ignoreVoiceTranscript.current=false},onTranscript:text=>{if(!ignoreVoiceTranscript.current)setDraft(text)},onResult:text=>{ignoreVoiceTranscript.current=true;setDraft('');send(text)},onEnd:()=>{setDraft('');window.setTimeout(()=>{ignoreVoiceTranscript.current=false},250)}});
+  return <><button className="sd-agent-backdrop" onClick={close} aria-label="Cerrar asistente"/><aside className="sd-agent-panel">
+    <div className="sd-agent-head"><div><span><Sparkles size={17}/></span><div><b>Asistente</b><small>Preguntá o pedí una acción</small></div></div><button onClick={close}><X size={18}/></button></div>
+    <div className="sd-agent-body">
+      {msgs.length===0&&<div className="sd-prompt-grid">{prompts.map(p=><button key={p} onClick={()=>send(p)}>{p}</button>)}</div>}
+      <div className="sd-chat-list">{msgs.map((m,i)=><div className={`sd-chat-message ${m.role}`} key={i}>{m.text}</div>)}</div>
+    </div>
+    <div className="sd-agent-composer"><ChatComposer value={draft} onChange={setDraft} onSubmit={send} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="compact" elevation="none" sendActions={<ChatDictationButton dictation={dictation} size="sm" isHiddenWhenUnsupported={false} label={dictation.isListening?'Detener':'Hablar'}/>} sendButton={<button className="sd-send" type="button" onClick={()=>send(draft)} disabled={busy||!draft.trim()}><ArrowUp size={18}/></button>}/></div>
+  </aside></>
+}
+
+function Metric({title,value,note}:{title:string;value:string;note:string}){return <article className="sd-metric"><span>{title}</span><strong>{value}</strong><small>{note}</small></article>}
+function Payment({date,name,amount}:{date:string;name:string;amount:string}){return <div className="sd-payment"><span>{date}</span><div><b>{name}</b></div><strong>{amount}</strong></div>}
+function CardHead({title,subtitle,action}:{title:string;subtitle?:string;action?:React.ReactNode}){return <div className="sd-card-head"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>}
+function Field({label,value,onChange}:{label:string;value:string;onChange:(v:string)=>void}){return <label className="sd-field"><span>{label}</span><input value={value} onChange={e=>onChange(e.target.value)}/></label>}
+function Source({icon:Icon,title,copy,click}:{icon:any;title:string;copy:string;click:()=>void}){return <button className="sd-source" onClick={click}><span><Icon size={18}/></span><div><b>{title}</b><small>{copy}</small></div></button>}
+function NavItem({icon:Icon,label,active,onClick}:{icon:any;label:string;active:boolean;onClick:()=>void}){return <button className={`sd-nav-item ${active?'active':''}`} onClick={onClick}><Icon size={17}/><span>{label}</span></button>}
 
 function CategorizedTxList({items}:{items:Tx[]}){
- const groups=Object.entries(items.reduce<Record<string,Tx[]>>((acc,t)=>{(acc[t.category]??=[]).push(t);return acc},{}))
-   .map(([category,group])=>({category,group,total:group.reduce((s,t)=>s+t.amount,0)}))
-   .sort((a,b)=>b.total-a.total);
- return <div className="category-accordion">{groups.map(({category,group,total})=><details className="category-group" key={category}><summary><div><b>{category}</b><span>{group.length} movimiento{group.length===1?'':'s'}</span></div><strong>{money(total)}</strong></summary><div className="category-group-body"><TxList items={group}/></div></details>)}</div>
+  const groups=Object.entries(items.reduce<Record<string,Tx[]>>((acc,t)=>{(acc[t.category]??=[]).push(t);return acc},{})).map(([category,group])=>({category,group,total:group.reduce((s,t)=>s+t.amount,0)})).sort((a,b)=>b.total-a.total);
+  return <div className="sd-accordion">{groups.map(({category,group,total})=><details key={category}><summary><div className="sd-summary-main"><ChevronDown size={15}/><div><b>{category}</b><small>{group.length} movimiento{group.length===1?'':'s'}</small></div></div><strong>{money(total)}</strong></summary><div className="sd-tx-table">{group.map(t=><div className="sd-tx-row" key={t.id}><span className="sd-tx-icon"><ShoppingBag size={15}/></span><div><b>{t.name}</b><small>{new Date(t.date+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short'})} · {t.source}</small></div><strong>{money(t.amount)}</strong></div>)}</div></details>)}</div>
 }
 
-function Add({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){return <section className="stack add-stack">
- <div className="add-top-grid"><div className="scanner-card" role="button" tabIndex={0} onClick={()=>scanRef.current?.click()} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();scanRef.current?.click()}}}><div className="scanner-icon"><Camera/></div><div><span>ESCÁNER INTELIGENTE</span><h2>Apuntá al ticket y listo.</h2><p>Lee comercio, importe, fecha, impuestos y forma de pago. Después revisás los datos antes de guardarlos.</p></div><div className="scanner-cta"><Camera size={18}/><b>Abrir cámara</b><ChevronRight size={18}/></div></div><div className="add-sources"><div className="section-title"><div><span>OTRAS FORMAS</span><h2>¿Cómo querés cargarlo?</h2></div></div><div className="source-grid"><Source icon={FileText} title="Subir PDF" copy="Tarjeta, banco, factura o resumen" click={()=>pdfRef.current?.click()}/><Source icon={CircleDollarSign} title="Carga manual" copy="Efectivo o cualquier gasto rápido" click={()=>document.getElementById('manual')?.scrollIntoView({behavior:'smooth'})}/><Source icon={Mail} title="Mail" copy="Facturas y comprobantes" click={()=>setNotice('La conexión con Gmail/Outlook se habilita con autorización OAuth.')}/><Source icon={Landmark} title="Banco" copy="Cuentas y tarjetas" click={()=>setNotice('La conexión bancaria necesita autorización segura del proveedor.')}/><Source icon={Wallet} title="Billetera" copy="Mercado Pago, Ualá y más" click={()=>setNotice('La conexión de billeteras queda preparada para autorización.')}/><Source icon={ReceiptText} title="Factura / QR" copy="Leé el comprobante con la cámara" click={()=>scanRef.current?.click()}/></div></div></div>
- <input ref={scanRef} hidden type="file" accept="image/*" capture="environment" onChange={e=>e.target.files?.[0]&&scan(e.target.files[0])}/><input ref={pdfRef} hidden type="file" accept="application/pdf" onChange={e=>e.target.files?.[0]&&pdf(e.target.files[0])}/>
- {notice&&<div className="notice">{busy?'Procesando… ':''}{notice}</div>}
- <Card padding={4}><div id="manual" className="manual"><h2>Carga manual</h2><TextInput label="Concepto" value={manual.name} onChange={(v:string)=>setManual({...manual,name:v})} width="100%"/><TextInput label="Importe" value={manual.amount} onChange={(v:string)=>setManual({...manual,amount:v})} width="100%"/><TextInput label="Categoría" value={manual.category} onChange={(v:string)=>setManual({...manual,category:v})} width="100%"/><Button label="Guardar gasto" variant="primary" width="100%" onClick={()=>{if(!manual.name||!manual.amount)return;addTx({name:manual.name,amount:Number(String(manual.amount).replace(/\D/g,'')),date:new Date().toISOString().slice(0,10),category:manual.category||'Otros',source:manual.source});setManual({name:'',amount:'',category:'',source:'Efectivo'})}}/></div></Card>
- </section>}
-
-function Accounts({go}:{go:(v:View)=>void}){const acc=[['Santander','Cuenta + Visa','$ 1.284.300','rose'],['Banco Galicia','Caja de ahorro','$ 842.900','orange'],['BBVA','Mastercard','$ 386.120','blue'],['Mercado Pago','Billetera','$ 214.800','cyan'],['Ualá','Billetera','$ 98.700','violet']];return <section className="stack accounts-stack"><p className="lead">Reuní cuentas, tarjetas y billeteras para entender tu situación completa.</p><div className="accounts-grid">{acc.map(a=><button className={`account ${a[3]}`} key={a[0]}><span><Landmark/></span><div><b>{a[0]}</b><small>{a[1]}</small></div><strong>{a[2]}</strong><ChevronRight/></button>)}</div><Button label="Agregar otra fuente" variant="primary" width="100%" onClick={()=>go('add')}/></section>}
-
-function Ask({msgs,ask,busy,panel=false}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean;panel?:boolean}){
- const prompts=['¿En qué estoy gastando de más?','¿Qué pagos se repiten todos los meses?','¿Cuánto gasté en IA estos tres meses?','¿Qué tengo que pagar esta semana?'];
- const [draft,setDraft]=useState('');
- const ignoreVoiceTranscript=useRef(false);
- const send=(raw:string)=>{const q=raw.trim();if(!q||busy)return;setDraft('');ask(q);setTimeout(()=>setDraft(''),0)};
- const dictation=useChatDictation({
-   lang:'es-AR',
-   continuous:false,
-   interimResults:true,
-   onStart:()=>{ignoreVoiceTranscript.current=false},
-   onTranscript:(text)=>{if(!ignoreVoiceTranscript.current)setDraft(text)},
-   onResult:(text)=>{ignoreVoiceTranscript.current=true;setDraft('');send(text)},
-   onEnd:()=>{setDraft('');window.setTimeout(()=>{ignoreVoiceTranscript.current=false},250)}
- });
- return <section className={`ask ${panel?'ask-panel':''}`}>
-   {!panel&&<div className="ask-intro"><span><Sparkles/></span><h2>Hablá con tus finanzas.</h2><p>Escribí o tocá el micrófono y preguntá como hablarías con una persona.</p></div>}
-   {msgs.length===0&&<div className="prompt-grid">{prompts.map(p=><button className="prompt-chip" key={p} onClick={()=>send(p)}>{p}</button>)}</div>}
-   <div className="chat-zone"><ChatMessageList align="top" density="compact">{msgs.map((m,i)=><ChatMessage key={i} sender={m.role==='user'?'user':'assistant'}><div className={`chat-bubble ${m.role==='user'?'chat-bubble-user':'chat-bubble-assistant'}`}>{m.text}</div></ChatMessage>)}</ChatMessageList></div>
-   <div className={`composer ${panel?'composer-panel':''}`}>
-     {msgs.length>0&&<div className="quick-prompts-wrap"><div className="quick-prompts" aria-label="Preguntas rápidas">{prompts.map(p=><button key={p} onClick={()=>send(p)}>{p}</button>)}</div><div className="quick-prompts-cue" aria-hidden="true"><ArrowLeftRight size={18}/></div></div>}
-     <ChatComposer value={draft} onChange={setDraft} onSubmit={send} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="spacious" elevation="low" sendActions={<ChatDictationButton dictation={dictation} size="md" isHiddenWhenUnsupported={false} label={dictation.isListening?'Detener dictado':'Hablar'}/>} sendButton={<button className="chat-send" type="button" onClick={()=>send(draft)} disabled={busy||!draft.trim()} aria-label="Enviar"><ArrowUp size={22}/></button>}/>
-   </div>
- </section>
-}
-
-function Source({icon:Icon,title,copy,click}:{icon:any;title:string;copy:string;click:()=>void}){return <button className="source" onClick={click}><span><Icon/></span><b>{title}</b><small>{copy}</small></button>}
-function Nav({icon:Icon,label,active,click}:{icon:any;label:string;active:boolean;click:()=>void}){return <button className={active?'active':''} onClick={click}><Icon size={19}/><span>{label}</span></button>}
+function categorySummary(items:Tx[]){return Object.entries(items.reduce<Record<string,{total:number,count:number}>>((a,t)=>{a[t.category]??={total:0,count:0};a[t.category].total+=t.amount;a[t.category].count++;return a},{})).map(([category,v])=>({category,...v})).sort((a,b)=>b.total-a.total)}
 function fileToDataUrl(file:File){return new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=reject;r.readAsDataURL(file)})}
