@@ -39,6 +39,9 @@ body{
 }
 button,input{font:inherit}
 button{color:inherit}
+.app-shell{min-height:100dvh}
+.desktop-sidebar,.desktop-topbar{display:none}
+.mobile-only{display:flex}
 
 .shell{
   width:100%;
@@ -345,19 +348,30 @@ button{color:inherit}
 }
 
 @media(min-width:900px){
-  body{background:#f2efe9}
-  .shell{max-width:1180px;padding:30px 32px 110px;background:linear-gradient(180deg,#f9f7f3 0%,#f7f5f1 100%);box-shadow:0 0 0 1px rgba(0,0,0,.025)}
+  body{background:#f3f1ec}
+  .app-shell{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100dvh}
+  .desktop-sidebar{display:flex;position:sticky;top:0;height:100dvh;padding:28px 18px 22px;flex-direction:column;background:#1f212a;color:#fff;border-right:1px solid rgba(255,255,255,.05)}
+  .desktop-brand{padding:4px 10px 28px}.desktop-brand span{display:block;font-size:11px;letter-spacing:.18em;color:#a9a6bf;font-weight:800}.desktop-brand strong{display:block;margin-top:7px;font-size:27px;letter-spacing:-1px}
+  .desktop-menu{display:grid;gap:7px}.desktop-menu button{border:0;background:transparent;color:#bdb9c9;border-radius:14px;min-height:48px;padding:0 13px;display:flex;align-items:center;gap:11px;text-align:left;font-size:14px;font-weight:700}.desktop-menu button:hover{background:rgba(255,255,255,.06);color:#fff}.desktop-menu button.active{background:#fff;color:#20212a}
+  .desktop-agent{margin-top:auto;border:0;border-radius:18px;background:linear-gradient(145deg,#6a59dc,#3f857d);color:#fff;padding:14px;display:flex;gap:11px;align-items:center;text-align:left;box-shadow:0 16px 36px rgba(0,0,0,.22)}
+  .desktop-agent b,.desktop-agent small{display:block}.desktop-agent b{font-size:14px}.desktop-agent small{font-size:11px;line-height:1.35;color:rgba(255,255,255,.76);margin-top:3px}
+  .shell{max-width:none;margin:0;padding:0 42px 48px;background:transparent;overflow:visible}
+  .desktop-topbar{display:flex;min-height:102px;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,.06);margin-bottom:28px}
+  .desktop-topbar span{font-size:11px;letter-spacing:.15em;font-weight:800;color:#817b88}.desktop-topbar h1{font-size:28px;letter-spacing:-1px;margin:6px 0 0}
+  .mobile-only{display:none!important}
   .home-stack{grid-template-columns:repeat(12,minmax(0,1fr));gap:18px 20px}
-  .home-stack>.video-hero{grid-column:span 7;grid-row:span 2;height:382px}
-  .home-stack>.primary-actions{grid-column:8 / -1;grid-template-columns:1fr;align-self:start}
-  .home-stack>.month-card{grid-column:8 / -1;align-self:stretch}
+  .home-stack>.video-hero{grid-column:span 8;height:360px}
+  .home-stack>.primary-actions{grid-column:9 / -1;grid-template-columns:1fr;align-self:start}
+  .home-stack>.month-card{grid-column:9 / -1;align-self:stretch}
   .home-stack>.section-title{grid-column:1 / -1}
   .home-stack>.insight-grid{grid-column:1 / -1;grid-template-columns:repeat(3,minmax(0,1fr))}
   .home-stack>.tx-list{grid-column:1 / -1}
   .primary-action{min-height:105px}
   .video-copy h1{font-size:46px;max-width:620px}
-  .stack{max-width:980px;margin-inline:auto}
+  .stack{max-width:none;margin-inline:0}
   .source-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .nav{max-width:620px;left:50%;bottom:18px;border:1px solid rgba(0,0,0,.06);border-radius:22px;height:70px;padding:7px 12px;background:rgba(255,253,250,.93);box-shadow:0 12px 36px rgba(25,23,34,.12)}
-  .agent-fab{bottom:28px;right:max(28px,calc((100vw - 1180px)/2 + 28px))}
+  .nav{display:none}
+  .agent-fab{bottom:28px;right:28px}
+  .account{padding:16px 18px}.account b{font-size:15px}.account small{font-size:12px}.account strong{font-size:14px}
+  .lead{font-size:15px}
 }

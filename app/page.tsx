@@ -42,20 +42,33 @@ export default function Page(){
  };
  const scan=async(file:File)=>{setBusy(true);setNotice('Leyendo comprobante…');try{const image=await fileToDataUrl(file);const r=await fetch('/api/receipt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});const d=await r.json();if(!r.ok)throw new Error(d.error);const x=d.result;addTx({name:x.merchant||'Comprobante',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:x.paymentMethod||'Ticket escaneado',notes:x.notes||''});setNotice(`Listo: ${x.merchant||'comprobante'} · ${money(Number(x.amount)||0)}`)}catch(e){setNotice(e instanceof Error?e.message:'No pude leer el ticket.')}finally{setBusy(false)}};
  const pdf=async(file:File)=>{setBusy(true);setNotice('Analizando PDF…');try{const f=new FormData();f.append('file',file);const r=await fetch('/api/pdf',{method:'POST',body:f});const d=await r.json();if(!r.ok)throw new Error(d.error);const arr=Array.isArray(d.result.transactions)?d.result.transactions:[];arr.forEach((x:any)=>addTx({name:x.merchant||'Movimiento PDF',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:file.name,notes:x.notes||''}));setNotice(`${d.result.summary||'PDF analizado'}. Importé ${arr.length} movimientos.`)}catch(e){setNotice(e instanceof Error?e.message:'No pude analizar el PDF.')}finally{setBusy(false)}};
- return <Theme theme={neutralTheme} mode="light"><main className="shell">
-   {view!=='home'&&<header className="top"><div><span className="eyebrow">FINANZAS</span><h1>{view==='activity'?'Cómo va mi actividad':view==='add'?'Cargar':'Mis cuentas y fuentes'}</h1></div><button className="account-btn" onClick={()=>setView('accounts')}><Wallet size={19}/></button></header>}
-   {view==='home'&&<HomeView monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={setView} openAgent={()=>setAgentOpen(true)}/>} 
-   {view==='activity'&&<Activity txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
-   {view==='add'&&<Add manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
-   {view==='accounts'&&<Accounts go={setView}/>} 
-   <button className={`agent-fab ${agentOpen?'agent-fab-open':''}`} onClick={()=>setAgentOpen(v=>!v)} aria-label="Abrir asistente"><Sparkles size={20}/><span>Asistente</span></button>
-   {agentOpen&&<><button className="agent-backdrop" aria-label="Cerrar asistente" onClick={()=>setAgentOpen(false)}/><section className="agent-panel"><div className="agent-panel-head"><div><span>ASISTENTE</span><h2>¿Qué querés hacer?</h2></div><button onClick={()=>setAgentOpen(false)} aria-label="Cerrar">×</button></div><Ask msgs={msgs} ask={ask} busy={busy} panel/></section></>}
-   <nav className="nav"><Nav icon={Home} label="Inicio" active={view==='home'} click={()=>setView('home')}/><Nav icon={ActivityIcon} label="Actividad" active={view==='activity'} click={()=>setView('activity')}/><button className="plus" onClick={()=>setView('add')}><Plus size={24}/></button><Nav icon={WalletCards} label="Fuentes" active={view==='accounts'} click={()=>setView('accounts')}/><Nav icon={MessageCircleMore} label="Asistente" active={agentOpen} click={()=>setAgentOpen(true)}/></nav>
- </main></Theme>
+ return <Theme theme={neutralTheme} mode="light"><div className="app-shell">
+   <aside className="desktop-sidebar">
+     <div className="desktop-brand"><span>FINANZAS</span><strong>Cifra</strong></div>
+     <div className="desktop-menu">
+       <button className={view==='home'?'active':''} onClick={()=>setView('home')}><Home size={19}/><span>Inicio</span></button>
+       <button className={view==='activity'?'active':''} onClick={()=>setView('activity')}><ActivityIcon size={19}/><span>Actividad</span></button>
+       <button className={view==='add'?'active':''} onClick={()=>setView('add')}><Plus size={19}/><span>Cargar</span></button>
+       <button className={view==='accounts'?'active':''} onClick={()=>setView('accounts')}><WalletCards size={19}/><span>Fuentes</span></button>
+     </div>
+     <button className="desktop-agent" onClick={()=>setAgentOpen(true)}><Sparkles size={19}/><div><b>Asistente</b><small>Preguntá o pedile una acción</small></div></button>
+   </aside>
+   <main className="shell">
+     <header className="desktop-topbar"><div><span>FINANZAS PERSONALES</span><h1>{view==='home'?'Panel general':view==='activity'?'Cómo va mi actividad':view==='add'?'Cargar':'Mis cuentas y fuentes'}</h1></div><button className="account-btn" onClick={()=>setView('accounts')}><Wallet size={19}/></button></header>
+     {view!=='home'&&<header className="top mobile-only"><div><span className="eyebrow">FINANZAS</span><h1>{view==='activity'?'Cómo va mi actividad':view==='add'?'Cargar':'Mis cuentas y fuentes'}</h1></div><button className="account-btn" onClick={()=>setView('accounts')}><Wallet size={19}/></button></header>}
+     {view==='home'&&<HomeView monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={setView} openAgent={()=>setAgentOpen(true)}/>} 
+     {view==='activity'&&<Activity txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
+     {view==='add'&&<Add manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
+     {view==='accounts'&&<Accounts go={setView}/>} 
+     <button className={`agent-fab ${agentOpen?'agent-fab-open':''}`} onClick={()=>setAgentOpen(v=>!v)} aria-label="Abrir asistente"><Sparkles size={20}/><span>Asistente</span></button>
+     {agentOpen&&<><button className="agent-backdrop" aria-label="Cerrar asistente" onClick={()=>setAgentOpen(false)}/><section className="agent-panel"><div className="agent-panel-head"><div><span>ASISTENTE</span><h2>¿Qué querés hacer?</h2></div><button onClick={()=>setAgentOpen(false)} aria-label="Cerrar">×</button></div><Ask msgs={msgs} ask={ask} busy={busy} panel/></section></>}
+     <nav className="nav"><Nav icon={Home} label="Inicio" active={view==='home'} click={()=>setView('home')}/><Nav icon={ActivityIcon} label="Actividad" active={view==='activity'} click={()=>setView('activity')}/><button className="plus" onClick={()=>setView('add')}><Plus size={24}/></button><Nav icon={WalletCards} label="Fuentes" active={view==='accounts'} click={()=>setView('accounts')}/><Nav icon={MessageCircleMore} label="Asistente" active={agentOpen} click={()=>setAgentOpen(true)}/></nav>
+   </main>
+ </div></Theme>
 }
 
 function HomeView({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number;previousTotal:number;txs:Tx[];go:(v:View)=>void;openAgent:()=>void}){
- const [videoOk,setVideoOk]=useState(true);
+ const [videoOk,setVideoOk]=useState(false);
  const delta=previousTotal?Math.round(((monthTotal-previousTotal)/previousTotal)*100):0;
  const top=Object.entries(txs.filter(t=>t.date.startsWith(currentMonth)).reduce<Record<string,number>>((a,t)=>{a[t.category]=(a[t.category]||0)+t.amount;return a},{})).sort((a,b)=>b[1]-a[1]).slice(0,3);
  return <section className="home-stack">

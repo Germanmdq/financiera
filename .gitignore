@@ -6,3 +6,4 @@ node_modules
 .DS_Store
 .npm-cache
 .skill-home
+.env*
