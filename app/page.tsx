@@ -101,13 +101,25 @@ function Accounts({go}:{go:(v:View)=>void}){const acc=[['Santander','Cuenta + Vi
 function Ask({msgs,ask,busy}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean}){
  const prompts=['¿En qué estoy gastando de más?','¿Qué pagos se repiten todos los meses?','¿Cuánto gasté en IA estos tres meses?','¿Qué tengo que pagar esta semana?'];
  const [draft,setDraft]=useState('');
+ const ignoreVoiceTranscript=useRef(false);
  const send=(raw:string)=>{const q=raw.trim();if(!q||busy)return;setDraft('');ask(q);setTimeout(()=>setDraft(''),0)};
- const dictation=useChatDictation({lang:'es-AR',continuous:false,interimResults:true,onTranscript:(text)=>setDraft(text),onResult:(text)=>send(text)});
+ const dictation=useChatDictation({
+   lang:'es-AR',
+   continuous:false,
+   interimResults:true,
+   onStart:()=>{ignoreVoiceTranscript.current=false},
+   onTranscript:(text)=>{if(!ignoreVoiceTranscript.current)setDraft(text)},
+   onResult:(text)=>{ignoreVoiceTranscript.current=true;setDraft('');send(text)},
+   onEnd:()=>{setDraft('');window.setTimeout(()=>{ignoreVoiceTranscript.current=false},250)}
+ });
  return <section className="ask">
    <div className="ask-intro"><span><Sparkles/></span><h2>Hablá con tus finanzas.</h2><p>Escribí o tocá el micrófono y preguntá como hablarías con una persona.</p></div>
-   <div className="prompt-grid">{prompts.map(p=><button className="prompt-chip" key={p} onClick={()=>send(p)}>{p}</button>)}</div>
+   {msgs.length===0&&<div className="prompt-grid">{prompts.map(p=><button className="prompt-chip" key={p} onClick={()=>send(p)}>{p}</button>)}</div>}
    <div className="chat-zone"><ChatMessageList align="top" density="compact">{msgs.map((m,i)=><ChatMessage key={i} sender={m.role==='user'?'user':'assistant'}><div className={`chat-bubble ${m.role==='user'?'chat-bubble-user':'chat-bubble-assistant'}`}>{m.text}</div></ChatMessage>)}</ChatMessageList></div>
-   <div className="composer"><ChatComposer value={draft} onChange={setDraft} onSubmit={send} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="spacious" elevation="low" sendActions={<ChatDictationButton dictation={dictation} size="md" isHiddenWhenUnsupported={false} label={dictation.isListening?'Detener dictado':'Hablar'}/>} sendButton={<button className="chat-send" type="button" onClick={()=>send(draft)} disabled={busy||!draft.trim()} aria-label="Enviar"><ArrowUp size={22}/></button>}/></div>
+   <div className="composer">
+     {msgs.length>0&&<div className="quick-prompts" aria-label="Preguntas rápidas">{prompts.map(p=><button key={p} onClick={()=>send(p)}>{p}</button>)}</div>}
+     <ChatComposer value={draft} onChange={setDraft} onSubmit={send} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="spacious" elevation="low" sendActions={<ChatDictationButton dictation={dictation} size="md" isHiddenWhenUnsupported={false} label={dictation.isListening?'Detener dictado':'Hablar'}/>} sendButton={<button className="chat-send" type="button" onClick={()=>send(draft)} disabled={busy||!draft.trim()} aria-label="Enviar"><ArrowUp size={22}/></button>}/>
+   </div>
  </section>
 }
 
