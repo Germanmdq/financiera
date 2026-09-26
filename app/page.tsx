@@ -6,7 +6,7 @@ import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {ChatComposer,ChatDictationButton,ChatMessage,ChatMessageBubble,ChatMessageList,useChatDictation} from '@astryxdesign/core/Chat';
-import {Activity as ActivityIcon,Camera,ChevronRight,CircleDollarSign,FileText,Home,Landmark,Mail,MessageCircleMore,Plus,ReceiptText,ScanLine,ShoppingBag,Sparkles,Upload,Wallet,WalletCards} from 'lucide-react';
+import {Activity as ActivityIcon,ArrowUp,Camera,ChevronRight,CircleDollarSign,FileText,Home,Landmark,Mail,MessageCircleMore,Plus,ReceiptText,ScanLine,ShoppingBag,Sparkles,Upload,Wallet,WalletCards} from 'lucide-react';
 import {seedTransactions,type Tx} from './data';
 
 type View='home'|'activity'|'add'|'accounts'|'ask';
@@ -101,12 +101,13 @@ function Accounts({go}:{go:(v:View)=>void}){const acc=[['Santander','Cuenta + Vi
 function Ask({msgs,ask,busy}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean}){
  const prompts=['¿En qué estoy gastando de más?','¿Qué pagos se repiten todos los meses?','¿Cuánto gasté en IA estos tres meses?','¿Qué tengo que pagar esta semana?'];
  const [draft,setDraft]=useState('');
- const dictation=useChatDictation({lang:'es-AR',continuous:false,interimResults:true,onTranscript:(text)=>setDraft(text),onResult:(text)=>{const q=text.trim();if(q){setDraft(q);ask(q)}}});
+ const send=(raw:string)=>{const q=raw.trim();if(!q||busy)return;setDraft('');ask(q);setTimeout(()=>setDraft(''),0)};
+ const dictation=useChatDictation({lang:'es-AR',continuous:false,interimResults:true,onTranscript:(text)=>setDraft(text),onResult:(text)=>send(text)});
  return <section className="ask">
    <div className="ask-intro"><span><Sparkles/></span><h2>Hablá con tus finanzas.</h2><p>Escribí o tocá el micrófono y preguntá como hablarías con una persona.</p></div>
-   <div className="prompt-grid">{prompts.map(p=><button className="prompt-chip" key={p} onClick={()=>ask(p)}>{p}</button>)}</div>
-   <div className="chat-zone"><ChatMessageList align="top" density="compact">{msgs.map((m,i)=><ChatMessage key={i} sender={m.role==='user'?'user':'assistant'}><ChatMessageBubble>{m.text}</ChatMessageBubble></ChatMessage>)}</ChatMessageList></div>
-   <div className="composer"><ChatComposer value={draft} onChange={setDraft} onSubmit={(value)=>{const q=value.trim();if(!q)return;setDraft('');ask(q)}} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="spacious" elevation="low" sendActions={<ChatDictationButton dictation={dictation} size="md" isHiddenWhenUnsupported={false} label={dictation.isListening?'Detener dictado':'Hablar'}/>}/></div>
+   <div className="prompt-grid">{prompts.map(p=><button className="prompt-chip" key={p} onClick={()=>send(p)}>{p}</button>)}</div>
+   <div className="chat-zone"><ChatMessageList align="top" density="compact">{msgs.map((m,i)=><ChatMessage key={i} sender={m.role==='user'?'user':'assistant'}><div className={`chat-bubble ${m.role==='user'?'chat-bubble-user':'chat-bubble-assistant'}`}>{m.text}</div></ChatMessage>)}</ChatMessageList></div>
+   <div className="composer"><ChatComposer value={draft} onChange={setDraft} onSubmit={send} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="spacious" elevation="low" sendActions={<ChatDictationButton dictation={dictation} size="md" isHiddenWhenUnsupported={false} label={dictation.isListening?'Detener dictado':'Hablar'}/>} sendButton={<button className="chat-send" type="button" onClick={()=>send(draft)} disabled={busy||!draft.trim()} aria-label="Enviar"><ArrowUp size={22}/></button>}/></div>
  </section>
 }
 
