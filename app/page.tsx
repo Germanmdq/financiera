@@ -76,7 +76,7 @@ function HomeView({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number
      <div className={`video-hero ${videoOk?'':'video-fallback'}`}>
        <video autoPlay muted playsInline loop preload="metadata" src="/intro-finanzas.mp4" onCanPlay={()=>setVideoOk(true)} onError={()=>setVideoOk(false)}/>
        <div className="video-shade"/>
-       <div className="video-copy"><span className="video-kicker">TU PLATA, MÁS CLARA</span><h1>Entendé qué pasa con tu dinero.</h1><p>Sin planillas. Sin vueltas.</p></div>
+       <div className="video-copy" aria-hidden="true" />
      </div>
      <div className="home-rail">
        <div className="primary-actions">
