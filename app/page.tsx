@@ -74,7 +74,7 @@ function HomeView({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number
  return <section className="home-stack">
    <div className="home-top-grid">
      <div className={`video-hero ${videoOk?'':'video-fallback'}`}>
-       {videoOk&&<video autoPlay muted playsInline loop preload="metadata" src="/intro-finanzas.mp4" onError={()=>setVideoOk(false)}/>}
+       <video autoPlay muted playsInline loop preload="metadata" src="/intro-finanzas.mp4" onCanPlay={()=>setVideoOk(true)} onError={()=>setVideoOk(false)}/>
        <div className="video-shade"/>
        <div className="video-copy"><span className="video-kicker">TU PLATA, MÁS CLARA</span><h1>Entendé qué pasa con tu dinero.</h1><p>Sin planillas. Sin vueltas.</p></div>
      </div>
@@ -86,25 +86,31 @@ function HomeView({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number
        <section className="month-card"><div className="month-head"><div><span>Septiembre hasta hoy</span><strong>{money(monthTotal)}</strong></div><button onClick={openAgent}><Sparkles size={16}/> Preguntar</button></div><p>{delta>=0?`Llevás ${Math.abs(delta)}% más que en agosto.`:`Llevás ${Math.abs(delta)}% menos que en agosto.`} Lo importante no es una barra: es entender por qué.</p></section>
      </div>
    </div>
-   <div className="section-title"><div><span>LO QUE TE CONVIENE MIRAR</span><h2>Tu actividad, explicada</h2></div></div>
-   <div className="insight-grid">
-     <article className="insight lavender"><span>01</span><div><b>Antes del 8 de octubre</b><strong>$959.490</strong><p>Visa Santander, colegio y servicios.</p></div></article>
-     <article className="insight mint"><span>02</span><div><b>Mayor peso del mes</b><strong>{top[0]?.[0]||'—'}</strong><p>{top[0]?money(top[0][1]):'Sin datos'}</p></div></article>
-     <article className="insight peach"><span>03</span><div><b>Gastos que se repiten</b><strong>Streaming + IA</strong><p>Netflix, Spotify, OpenAI, Claude, Disney+ y más.</p></div></article>
+   <div className="dashboard-metrics">
+     <article className="metric-card"><span>Este mes</span><strong>{money(monthTotal)}</strong><small>{txs.filter(t=>t.date.startsWith(currentMonth)).length} movimientos</small></article>
+     <article className="metric-card"><span>Vs. agosto</span><strong>{delta>=0?'+':''}{delta}%</strong><small>{delta>=0?'más gasto':'menos gasto'} que el mes pasado</small></article>
+     <article className="metric-card"><span>Mayor rubro</span><strong>{top[0]?.[0]||'—'}</strong><small>{top[0]?money(top[0][1]):'Sin datos'}</small></article>
+     <article className="metric-card accent"><span>Antes del 8 oct</span><strong>$ 959.490</strong><small>Visa, colegio y servicios</small></article>
    </div>
    <div className="home-bottom-grid">
      <div className="home-movements">
-       <div className="section-title"><div><span>MOVIMIENTOS</span><h2>Últimos gastos</h2></div><button onClick={()=>go('activity')}>Ver todos</button></div>
+       <div className="panel-heading"><div><span>ACTIVIDAD RECIENTE</span><h2>Últimos movimientos</h2></div><button onClick={()=>go('activity')}>Ver actividad</button></div>
        <TxList items={txs.slice(0,6)}/>
      </div>
-     <aside className="upcoming-card">
-       <span>PRÓXIMOS PAGOS</span>
-       <h3>Lo que viene ahora</h3>
-       <div><b>03 oct</b><p>Visa Santander</p><strong>$ 684.320</strong></div>
-       <div><b>05 oct</b><p>Colegio San José</p><strong>$ 185.000</strong></div>
-       <div><b>08 oct</b><p>Servicios</p><strong>$ 90.170</strong></div>
-       <button onClick={openAgent}><Sparkles size={16}/> Preguntarle al asistente</button>
-     </aside>
+     <div className="home-side-stack">
+       <aside className="upcoming-card">
+         <span>PRÓXIMOS PAGOS</span>
+         <h3>Lo que viene ahora</h3>
+         <div><b>03 oct</b><p>Visa Santander</p><strong>$ 684.320</strong></div>
+         <div><b>05 oct</b><p>Colegio San José</p><strong>$ 185.000</strong></div>
+         <div><b>08 oct</b><p>Servicios</p><strong>$ 90.170</strong></div>
+       </aside>
+       <aside className="assistant-card">
+         <div className="assistant-card-icon"><Sparkles size={20}/></div>
+         <div><span>ASISTENTE</span><h3>Preguntale a tus números.</h3><p>Podés pedirle que encuentre gastos, compare meses o te lleve a una sección.</p></div>
+         <button onClick={openAgent}>Abrir asistente <ChevronRight size={16}/></button>
+       </aside>
+     </div>
    </div>
  </section>
 }
