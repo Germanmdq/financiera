@@ -295,6 +295,22 @@ button{color:inherit}
 }
 .plus:hover{box-shadow:0 0 0 1px oklch(0 0 0 / .07),0 12px 28px -8px rgba(91,80,189,.62)}.plus:active{scale:.96}
 
+.agent-fab{position:fixed;right:max(16px,calc((100vw - 760px)/2 + 16px));bottom:94px;z-index:30;border:0;border-radius:999px;background:linear-gradient(145deg,#6254d9,#3d847d);color:#fff;display:flex;align-items:center;gap:9px;padding:12px 16px;font-size:14px;font-weight:800;box-shadow:0 16px 38px rgba(54,45,126,.32);transition:transform .15s ease,box-shadow .15s ease}
+.agent-fab:active{transform:scale(.96)}
+.agent-fab-open{box-shadow:0 10px 24px rgba(54,45,126,.22)}
+.agent-backdrop{position:fixed;inset:0;border:0;background:rgba(20,20,26,.24);backdrop-filter:blur(3px);z-index:31}
+.agent-panel{position:fixed;z-index:32;right:max(18px,calc((100vw - 1180px)/2 + 18px));bottom:24px;width:min(440px,calc(100vw - 24px));height:min(680px,calc(100dvh - 48px));background:#f8f6f2;border-radius:30px;box-shadow:0 30px 90px rgba(24,22,38,.28);display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.06)}
+.agent-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 20px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.76);backdrop-filter:blur(16px)}
+.agent-panel-head span{font-size:11px;letter-spacing:.16em;font-weight:800;color:var(--accent)}
+.agent-panel-head h2{margin:5px 0 0;font-size:24px;letter-spacing:-.8px}
+.agent-panel-head>button{width:38px;height:38px;border:0;border-radius:14px;background:#f0ede7;color:#5f5a63;font-size:26px;line-height:1;display:grid;place-items:center}
+.agent-panel .ask{flex:1;min-height:0;padding:14px 16px 16px;gap:12px}
+.agent-panel .chat-zone{min-height:0;padding:0 0 12px;overflow-y:auto;overflow-x:hidden}
+.composer-panel{position:static!important;transform:none!important;width:100%!important;max-width:100%!important;bottom:auto!important;margin-top:auto;overflow:visible}
+.ask-panel .prompt-grid{grid-template-columns:1fr 1fr}
+.ask-panel .prompt-chip{font-size:13px;min-height:46px;padding:10px 12px}
+.ask-panel .quick-prompts-wrap{padding-right:36px}
+
 @keyframes hero-enter{from{opacity:0;transform:translateY(12px);filter:blur(4px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
 @keyframes section-enter{from{opacity:0;transform:translateY(12px);filter:blur(4px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
 
@@ -321,6 +337,27 @@ button{color:inherit}
   .chat-bubble{max-width:88%;font-size:16px;padding:13px 15px}
   .month-head{flex-wrap:wrap}
   .month-head button{flex:0 0 auto}
+  .agent-fab{right:14px;bottom:94px;padding:12px;width:48px;height:48px;justify-content:center}
+  .agent-fab span{display:none}
+  .agent-panel{left:0;right:0;bottom:0;width:100%;height:min(78dvh,720px);border-radius:28px 28px 0 0;border-left:0;border-right:0;border-bottom:0}
+  .agent-panel .ask{padding:12px 12px 16px}
+  .ask-panel .prompt-grid{grid-template-columns:1fr}
 }
 
-@media(min-width:900px){body{background:#f7f5f1}}
+@media(min-width:900px){
+  body{background:#f2efe9}
+  .shell{max-width:1180px;padding:30px 32px 110px;background:linear-gradient(180deg,#f9f7f3 0%,#f7f5f1 100%);box-shadow:0 0 0 1px rgba(0,0,0,.025)}
+  .home-stack{grid-template-columns:repeat(12,minmax(0,1fr));gap:18px 20px}
+  .home-stack>.video-hero{grid-column:span 7;grid-row:span 2;height:382px}
+  .home-stack>.primary-actions{grid-column:8 / -1;grid-template-columns:1fr;align-self:start}
+  .home-stack>.month-card{grid-column:8 / -1;align-self:stretch}
+  .home-stack>.section-title{grid-column:1 / -1}
+  .home-stack>.insight-grid{grid-column:1 / -1;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .home-stack>.tx-list{grid-column:1 / -1}
+  .primary-action{min-height:105px}
+  .video-copy h1{font-size:46px;max-width:620px}
+  .stack{max-width:980px;margin-inline:auto}
+  .source-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .nav{max-width:620px;left:50%;bottom:18px;border:1px solid rgba(0,0,0,.06);border-radius:22px;height:70px;padding:7px 12px;background:rgba(255,253,250,.93);box-shadow:0 12px 36px rgba(25,23,34,.12)}
+  .agent-fab{bottom:28px;right:max(28px,calc((100vw - 1180px)/2 + 28px))}
+}

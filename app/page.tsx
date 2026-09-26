@@ -9,7 +9,7 @@ import {ChatComposer,ChatDictationButton,ChatMessage,ChatMessageBubble,ChatMessa
 import {Activity as ActivityIcon,ArrowLeftRight,ArrowUp,Camera,ChevronRight,CircleDollarSign,FileText,Home,Landmark,Mail,MessageCircleMore,Plus,ReceiptText,ScanLine,ShoppingBag,Sparkles,Upload,Wallet,WalletCards} from 'lucide-react';
 import {seedTransactions,type Tx} from './data';
 
-type View='home'|'activity'|'add'|'accounts'|'ask';
+type View='home'|'activity'|'add'|'accounts';
 type Msg={role:'user'|'assistant',text:string};
 const money=(n:number)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n);
 const currentMonth='2026-09';
@@ -17,6 +17,7 @@ const previousMonth='2026-08';
 
 export default function Page(){
  const [view,setView]=useState<View>('home');
+ const [agentOpen,setAgentOpen]=useState(false);
  const [txs,setTxs]=useState<Tx[]>(seedTransactions);
  const [msgs,setMsgs]=useState<Msg[]>([]);
  const [busy,setBusy]=useState(false);
@@ -29,21 +30,31 @@ export default function Page(){
  const monthTotal=useMemo(()=>monthTxs.reduce((s,t)=>s+t.amount,0),[monthTxs]);
  const previousTotal=useMemo(()=>txs.filter(t=>t.date.startsWith(previousMonth)).reduce((s,t)=>s+t.amount,0),[txs]);
  const addTx=(t:Omit<Tx,'id'>)=>setTxs(v=>[{...t,id:crypto.randomUUID()},...v]);
- const ask=async(q:string)=>{if(!q.trim()||busy)return;setMsgs(v=>[...v,{role:'user',text:q}]);setBusy(true);try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,context:{today:'2026-09-26',transactions:txs,summary:{monthTotal,previousTotal,upcoming:[{name:'Visa Santander',date:'2026-10-03',amount:684320},{name:'Colegio San José',date:'2026-10-05',amount:185000},{name:'Servicios',date:'2026-10-08',amount:90170}]}}})});const d=await r.json();setMsgs(v=>[...v,{role:'assistant',text:d.answer||d.error||'No pude responder.'}])}catch{setMsgs(v=>[...v,{role:'assistant',text:'No pude conectar con el servidor.'}])}finally{setBusy(false)}};
+ const ask=async(q:string)=>{
+   const clean=q.trim(); if(!clean||busy)return;
+   setMsgs(v=>[...v,{role:'user',text:clean}]);
+   const n=clean.toLocaleLowerCase('es-AR');
+   const action=(target:View,label:string)=>{setView(target);setMsgs(v=>[...v,{role:'assistant',text:`Listo. Abrí ${label}.`}]);};
+   if(/\b(cargar|carga|agregar gasto|nuevo gasto|sumar gasto)\b/.test(n)){action('add','Cargar');return;}
+   if(/\b(actividad|resumen|cómo voy|como voy|qué gasté|que gaste)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('activity','Cómo va mi actividad');return;}
+   if(/\b(cuentas|fuentes|tarjetas|billeteras|bancos)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('accounts','Mis cuentas y fuentes');return;}
+   setBusy(true);try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:clean,context:{today:'2026-09-26',currentScreen:view,transactions:txs,summary:{monthTotal,previousTotal,upcoming:[{name:'Visa Santander',date:'2026-10-03',amount:684320},{name:'Colegio San José',date:'2026-10-05',amount:185000},{name:'Servicios',date:'2026-10-08',amount:90170}]}}})});const d=await r.json();setMsgs(v=>[...v,{role:'assistant',text:d.answer||d.error||'No pude responder.'}])}catch{setMsgs(v=>[...v,{role:'assistant',text:'No pude conectar con el servidor.'}])}finally{setBusy(false)}
+ };
  const scan=async(file:File)=>{setBusy(true);setNotice('Leyendo comprobante…');try{const image=await fileToDataUrl(file);const r=await fetch('/api/receipt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});const d=await r.json();if(!r.ok)throw new Error(d.error);const x=d.result;addTx({name:x.merchant||'Comprobante',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:x.paymentMethod||'Ticket escaneado',notes:x.notes||''});setNotice(`Listo: ${x.merchant||'comprobante'} · ${money(Number(x.amount)||0)}`)}catch(e){setNotice(e instanceof Error?e.message:'No pude leer el ticket.')}finally{setBusy(false)}};
  const pdf=async(file:File)=>{setBusy(true);setNotice('Analizando PDF…');try{const f=new FormData();f.append('file',file);const r=await fetch('/api/pdf',{method:'POST',body:f});const d=await r.json();if(!r.ok)throw new Error(d.error);const arr=Array.isArray(d.result.transactions)?d.result.transactions:[];arr.forEach((x:any)=>addTx({name:x.merchant||'Movimiento PDF',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:file.name,notes:x.notes||''}));setNotice(`${d.result.summary||'PDF analizado'}. Importé ${arr.length} movimientos.`)}catch(e){setNotice(e instanceof Error?e.message:'No pude analizar el PDF.')}finally{setBusy(false)}};
  return <Theme theme={neutralTheme} mode="light"><main className="shell">
-   {view!=='home'&&<header className="top"><div><span className="eyebrow">FINANZAS</span><h1>{view==='activity'?'Cómo va mi actividad':view==='add'?'Cargar':view==='accounts'?'Mis cuentas y fuentes':'Asistente'}</h1></div><button className="account-btn" onClick={()=>setView('accounts')}><Wallet size={19}/></button></header>}
-   {view==='home'&&<HomeView monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={setView}/>} 
+   {view!=='home'&&<header className="top"><div><span className="eyebrow">FINANZAS</span><h1>{view==='activity'?'Cómo va mi actividad':view==='add'?'Cargar':'Mis cuentas y fuentes'}</h1></div><button className="account-btn" onClick={()=>setView('accounts')}><Wallet size={19}/></button></header>}
+   {view==='home'&&<HomeView monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={setView} openAgent={()=>setAgentOpen(true)}/>} 
    {view==='activity'&&<Activity txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
    {view==='add'&&<Add manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
    {view==='accounts'&&<Accounts go={setView}/>} 
-   {view==='ask'&&<Ask msgs={msgs} ask={ask} busy={busy}/>} 
-   <nav className="nav"><Nav icon={Home} label="Inicio" active={view==='home'} click={()=>setView('home')}/><Nav icon={ActivityIcon} label="Actividad" active={view==='activity'} click={()=>setView('activity')}/><button className="plus" onClick={()=>setView('add')}><Plus size={24}/></button><Nav icon={WalletCards} label="Fuentes" active={view==='accounts'} click={()=>setView('accounts')}/><Nav icon={MessageCircleMore} label="Asistente" active={view==='ask'} click={()=>setView('ask')}/></nav>
+   <button className={`agent-fab ${agentOpen?'agent-fab-open':''}`} onClick={()=>setAgentOpen(v=>!v)} aria-label="Abrir asistente"><Sparkles size={20}/><span>Asistente</span></button>
+   {agentOpen&&<><button className="agent-backdrop" aria-label="Cerrar asistente" onClick={()=>setAgentOpen(false)}/><section className="agent-panel"><div className="agent-panel-head"><div><span>ASISTENTE</span><h2>¿Qué querés hacer?</h2></div><button onClick={()=>setAgentOpen(false)} aria-label="Cerrar">×</button></div><Ask msgs={msgs} ask={ask} busy={busy} panel/></section></>}
+   <nav className="nav"><Nav icon={Home} label="Inicio" active={view==='home'} click={()=>setView('home')}/><Nav icon={ActivityIcon} label="Actividad" active={view==='activity'} click={()=>setView('activity')}/><button className="plus" onClick={()=>setView('add')}><Plus size={24}/></button><Nav icon={WalletCards} label="Fuentes" active={view==='accounts'} click={()=>setView('accounts')}/><Nav icon={MessageCircleMore} label="Asistente" active={agentOpen} click={()=>setAgentOpen(true)}/></nav>
  </main></Theme>
 }
 
-function HomeView({monthTotal,previousTotal,txs,go}:{monthTotal:number;previousTotal:number;txs:Tx[];go:(v:View)=>void}){
+function HomeView({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number;previousTotal:number;txs:Tx[];go:(v:View)=>void;openAgent:()=>void}){
  const [videoOk,setVideoOk]=useState(true);
  const delta=previousTotal?Math.round(((monthTotal-previousTotal)/previousTotal)*100):0;
  const top=Object.entries(txs.filter(t=>t.date.startsWith(currentMonth)).reduce<Record<string,number>>((a,t)=>{a[t.category]=(a[t.category]||0)+t.amount;return a},{})).sort((a,b)=>b[1]-a[1]).slice(0,3);
@@ -57,7 +68,7 @@ function HomeView({monthTotal,previousTotal,txs,go}:{monthTotal:number;previousT
      <button className="primary-action load" onClick={()=>go('add')}><span><ScanLine/></span><div><b>Cargar</b><small>Ticket, PDF, gasto o cuenta</small></div><ChevronRight/></button>
      <button className="primary-action activity" onClick={()=>go('activity')}><span><ActivityIcon/></span><div><b>Cómo va mi actividad</b><small>Qué gastaste y qué está cambiando</small></div><ChevronRight/></button>
    </div>
-   <section className="month-card"><div className="month-head"><div><span>Septiembre hasta hoy</span><strong>{money(monthTotal)}</strong></div><button onClick={()=>go('ask')}><Sparkles size={16}/> Preguntar</button></div><p>{delta>=0?`Llevás ${Math.abs(delta)}% más que en agosto.`:`Llevás ${Math.abs(delta)}% menos que en agosto.`} Lo importante no es una barra: es entender por qué.</p></section>
+   <section className="month-card"><div className="month-head"><div><span>Septiembre hasta hoy</span><strong>{money(monthTotal)}</strong></div><button onClick={openAgent}><Sparkles size={16}/> Preguntar</button></div><p>{delta>=0?`Llevás ${Math.abs(delta)}% más que en agosto.`:`Llevás ${Math.abs(delta)}% menos que en agosto.`} Lo importante no es una barra: es entender por qué.</p></section>
    <div className="section-title"><div><span>LO QUE TE CONVIENE MIRAR</span><h2>Tu actividad, explicada</h2></div></div>
    <div className="insight-grid">
      <article className="insight lavender"><span>01</span><div><b>Antes del 8 de octubre</b><strong>$959.490</strong><p>Visa Santander, colegio y servicios.</p></div></article>
@@ -98,7 +109,7 @@ function Add({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,bu
 
 function Accounts({go}:{go:(v:View)=>void}){const acc=[['Santander','Cuenta + Visa','$ 1.284.300','rose'],['Banco Galicia','Caja de ahorro','$ 842.900','orange'],['BBVA','Mastercard','$ 386.120','blue'],['Mercado Pago','Billetera','$ 214.800','cyan'],['Ualá','Billetera','$ 98.700','violet']];return <section className="stack"><p className="lead">Reuní cuentas, tarjetas y billeteras para entender tu situación completa.</p>{acc.map(a=><button className={`account ${a[3]}`} key={a[0]}><span><Landmark/></span><div><b>{a[0]}</b><small>{a[1]}</small></div><strong>{a[2]}</strong><ChevronRight/></button>)}<Button label="Agregar otra fuente" variant="primary" width="100%" onClick={()=>go('add')}/></section>}
 
-function Ask({msgs,ask,busy}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean}){
+function Ask({msgs,ask,busy,panel=false}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean;panel?:boolean}){
  const prompts=['¿En qué estoy gastando de más?','¿Qué pagos se repiten todos los meses?','¿Cuánto gasté en IA estos tres meses?','¿Qué tengo que pagar esta semana?'];
  const [draft,setDraft]=useState('');
  const ignoreVoiceTranscript=useRef(false);
@@ -112,11 +123,11 @@ function Ask({msgs,ask,busy}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean}){
    onResult:(text)=>{ignoreVoiceTranscript.current=true;setDraft('');send(text)},
    onEnd:()=>{setDraft('');window.setTimeout(()=>{ignoreVoiceTranscript.current=false},250)}
  });
- return <section className="ask">
-   <div className="ask-intro"><span><Sparkles/></span><h2>Hablá con tus finanzas.</h2><p>Escribí o tocá el micrófono y preguntá como hablarías con una persona.</p></div>
+ return <section className={`ask ${panel?'ask-panel':''}`}>
+   {!panel&&<div className="ask-intro"><span><Sparkles/></span><h2>Hablá con tus finanzas.</h2><p>Escribí o tocá el micrófono y preguntá como hablarías con una persona.</p></div>}
    {msgs.length===0&&<div className="prompt-grid">{prompts.map(p=><button className="prompt-chip" key={p} onClick={()=>send(p)}>{p}</button>)}</div>}
    <div className="chat-zone"><ChatMessageList align="top" density="compact">{msgs.map((m,i)=><ChatMessage key={i} sender={m.role==='user'?'user':'assistant'}><div className={`chat-bubble ${m.role==='user'?'chat-bubble-user':'chat-bubble-assistant'}`}>{m.text}</div></ChatMessage>)}</ChatMessageList></div>
-   <div className="composer">
+   <div className={`composer ${panel?'composer-panel':''}`}>
      {msgs.length>0&&<div className="quick-prompts-wrap"><div className="quick-prompts" aria-label="Preguntas rápidas">{prompts.map(p=><button key={p} onClick={()=>send(p)}>{p}</button>)}</div><div className="quick-prompts-cue" aria-hidden="true"><ArrowLeftRight size={18}/></div></div>}
      <ChatComposer value={draft} onChange={setDraft} onSubmit={send} isDisabled={busy} placeholder={busy?'Pensando…':'Preguntá por tus gastos…'} density="spacious" elevation="low" sendActions={<ChatDictationButton dictation={dictation} size="md" isHiddenWhenUnsupported={false} label={dictation.isListening?'Detener dictado':'Hablar'}/>} sendButton={<button className="chat-send" type="button" onClick={()=>send(draft)} disabled={busy||!draft.trim()} aria-label="Enviar"><ArrowUp size={22}/></button>}/>
    </div>
