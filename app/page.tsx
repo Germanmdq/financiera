@@ -1,6 +1,7 @@
 'use client';
 
 import {useEffect,useMemo,useRef,useState} from 'react';
+import QRCode from 'qrcode';
 import {ChatComposer,ChatDictationButton,useChatDictation} from '@astryxdesign/core/Chat';
 import {
   Activity as ActivityIcon,
@@ -27,6 +28,7 @@ import {
   TrendingUp,
   Wallet,
   WalletCards,
+  Smartphone,
   X,
 } from 'lucide-react';
 import {seedTransactions,type Tx} from './data';
@@ -48,10 +50,12 @@ export default function Page(){
   const [busy,setBusy]=useState(false);
   const [notice,setNotice]=useState('');
   const [manual,setManual]=useState({name:'',amount:'',category:'',source:'Efectivo'});
+  const [mobileScanToken,setMobileScanToken]=useState<string|null>(null);
+  const [phoneScan,setPhoneScan]=useState<{token:string;url:string;qr:string;status:string}|null>(null);
   const scanRef=useRef<HTMLInputElement>(null);
   const pdfRef=useRef<HTMLInputElement>(null);
 
-  useEffect(()=>{const saved=localStorage.getItem('finanzas.txs.v2');if(saved)try{setTxs(JSON.parse(saved))}catch{}},[]);
+  useEffect(()=>{const saved=localStorage.getItem('finanzas.txs.v2');if(saved)try{setTxs(JSON.parse(saved))}catch{};const token=new URLSearchParams(window.location.search).get('scan');if(token)setMobileScanToken(token)},[]);
   useEffect(()=>{localStorage.setItem('finanzas.txs.v2',JSON.stringify(txs))},[txs]);
 
   const monthTxs=useMemo(()=>txs.filter(t=>t.date.startsWith(currentMonth)),[txs]);
@@ -61,6 +65,35 @@ export default function Page(){
 
   const navigate=(next:View)=>{setView(next);if(next!=='categories')setSelectedCategory(null);setSidebarOpen(false)};
   const openCategory=(category:string)=>{setSelectedCategory(category);setView('categories');setSidebarOpen(false)};
+
+  const startPhoneScan=async()=>{
+    const token=crypto.randomUUID();
+    const r=await fetch('/api/scan-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',token})});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'No pude crear la sesión.');
+    const url=`${window.location.origin}/?scan=${encodeURIComponent(token)}`;
+    const qr=await QRCode.toDataURL(url,{width:320,margin:1,errorCorrectionLevel:'M'});
+    setPhoneScan({token,url,qr,status:'Esperando al teléfono…'});
+  };
+
+  useEffect(()=>{
+    if(!phoneScan?.token)return;
+    const id=window.setInterval(async()=>{
+      try{
+        const r=await fetch('/api/scan-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'get',token:phoneScan.token})});
+        const d=await r.json();
+        if(d.status==='processing')setPhoneScan(v=>v?{...v,status:'Procesando foto…'}:v);
+        if(d.status==='ready'&&d.result){
+          const x=d.result;
+          addTx({name:x.merchant||'Comprobante',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:x.paymentMethod||'Teléfono',notes:x.notes||''});
+          setNotice(`Listo desde el teléfono: ${x.merchant||'comprobante'} · ${money(Number(x.amount)||0)}`);
+          setPhoneScan(null);
+        }
+        if(d.status==='error'){setNotice(d.error||'No pude procesar la foto.');setPhoneScan(null)}
+      }catch{}
+    },1500);
+    return()=>window.clearInterval(id);
+  },[phoneScan?.token]);
 
   const ask=async(q:string)=>{
     const clean=q.trim();
@@ -108,6 +141,8 @@ export default function Page(){
 
   const title=view==='home'?'Panel general':view==='stats'?'Estadísticas':view==='expenses'?'Mis gastos':view==='categories'?'Categorías':view==='investments'?'Inversiones':view==='add'?'Cargar':'Fuentes';
 
+  if(mobileScanToken)return <MobileScanMode token={mobileScanToken}/>;
+
   return <div className="sd-app">
     <button className={`sd-mobile-backdrop ${sidebarOpen?'show':''}`} onClick={()=>setSidebarOpen(false)} aria-label="Cerrar menú"/>
     <aside className={`sd-sidebar ${sidebarOpen?'open':''}`}>
@@ -154,7 +189,7 @@ export default function Page(){
         {view==='expenses'&&<ExpensesView txs={txs} monthTotal={monthTotal}/>} 
         {view==='categories'&&<CategoriesView txs={txs} selectedCategory={selectedCategory} openCategory={openCategory} back={()=>setSelectedCategory(null)}/>} 
         {view==='investments'&&<InvestmentsView/>}
-        {view==='add'&&<AddView manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
+        {view==='add'&&<AddView manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy} startPhoneScan={startPhoneScan}/>} 
         {view==='accounts'&&<AccountsView go={navigate}/>} 
       </div></div>
     </main>
@@ -169,6 +204,7 @@ export default function Page(){
 
     <button className="sd-agent-fab" onClick={()=>setAgentOpen(true)}><Sparkles size={18}/><span>Asistente</span></button>
     {agentOpen&&<AgentPanel msgs={msgs} ask={ask} busy={busy} close={()=>setAgentOpen(false)}/>} 
+    {phoneScan&&<PhoneScanModal data={phoneScan} close={()=>setPhoneScan(null)}/>} 
   </div>
 }
 
@@ -328,17 +364,17 @@ function InvestmentsView(){
   </section>
 }
 
-function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){
+function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy,startPhoneScan}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean;startPhoneScan:()=>Promise<void>}){
   return <section className="sd-stack">
     <div className="sd-overview-head"><div><h1>Cargar</h1><p>Agregá movimientos desde ticket, PDF, banco o carga manual.</p></div></div>
     <div className="sd-load-card-grid">
-      <button className="sd-load-card primary" onClick={()=>scanRef.current?.click()}><span><ScanLine size={26}/></span><div><b>Escanear ticket</b><small>Cámara, factura o QR</small></div><ChevronRight size={18}/></button>
-      <button className="sd-load-card" onClick={()=>pdfRef.current?.click()}><span><FileText size={26}/></span><div><b>Subir PDF</b><small>Resumen, factura o tarjeta</small></div><ChevronRight size={18}/></button>
+      <div className="sd-load-card primary sd-scan-card-options"><span><ScanLine size={26}/></span><div><b>Escanear documentos</b><small>Usá la cámara de esta computadora o del teléfono</small><div className="sd-scan-actions"><button onClick={()=>scanRef.current?.click()}>Esta computadora</button><button onClick={()=>startPhoneScan()}><Smartphone size={15}/> Usar mi teléfono</button></div></div></div>
+      <button className="sd-load-card" onClick={()=>pdfRef.current?.click()}><span><FileText size={26}/></span><div><b>Subir documentos</b><small>PDF · CSV · TXT · Excel · Google Sheets</small></div><ChevronRight size={18}/></button>
       <button className="sd-load-card" onClick={()=>document.getElementById('manual')?.scrollIntoView({behavior:'smooth'})}><span><CircleDollarSign size={26}/></span><div><b>Carga manual</b><small>Efectivo o gasto rápido</small></div><ChevronRight size={18}/></button>
-      <button className="sd-load-card" onClick={()=>setNotice('Conexiones disponibles: banco, billetera y mail.')}><span><Landmark size={26}/></span><div><b>Conectar una fuente</b><small>Banco, billetera o mail</small></div><ChevronRight size={18}/></button>
+      <button className="sd-load-card" onClick={()=>setNotice('Conexiones disponibles: Google Sheets, banco, billetera y mail.')}><span><Landmark size={26}/></span><div><b>Conectar Google Sheets</b><small>Sincronizá una hoja directamente</small></div><ChevronRight size={18}/></button>
     </div>
     <input ref={scanRef} hidden type="file" accept="image/*" capture="environment" onChange={e=>e.target.files?.[0]&&scan(e.target.files[0])}/>
-    <input ref={pdfRef} hidden type="file" accept="application/pdf" onChange={e=>e.target.files?.[0]&&pdf(e.target.files[0])}/>
+    <input ref={pdfRef} hidden type="file" accept=".pdf,.csv,.txt,.xls,.xlsx,application/pdf,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e=>e.target.files?.[0]&&pdf(e.target.files[0])}/>
     {notice&&<div className="sd-notice">{busy?'Procesando… ':''}{notice}</div>}
     <section className="sd-card" id="manual"><CardHead title="Carga manual" subtitle="Ingresá los datos del movimiento"/><div className="sd-form-grid">
       <Field label="Concepto" value={manual.name} onChange={v=>setManual({...manual,name:v})}/>
@@ -352,6 +388,52 @@ function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotic
 function AccountsView({go}:{go:(v:View)=>void}){
   const accounts=[['Santander','Cuenta + Visa','$ 1.284.300'],['Banco Galicia','Caja de ahorro','$ 842.900'],['BBVA','Mastercard','$ 386.120'],['Mercado Pago','Billetera','$ 214.800'],['Ualá','Billetera','$ 98.700']];
   return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Fuentes</h1><p>Cuentas, tarjetas y billeteras conectadas.</p></div><button className="sd-btn primary" onClick={()=>go('add')}><Plus size={15}/> Agregar fuente</button></div><section className="sd-card"><CardHead title="Mis cuentas" subtitle={`${accounts.length} fuentes`}/><div className="sd-account-table">{accounts.map(([name,type,balance])=><button key={name} className="sd-account-row"><span className="sd-account-icon"><Landmark size={17}/></span><div><b>{name}</b><small>{type}</small></div><strong>{balance}</strong><ChevronRight size={16}/></button>)}</div></section></section>
+}
+
+function PhoneScanModal({data,close}:{data:{token:string;url:string;qr:string;status:string};close:()=>void}){
+  return <><button className="sd-agent-backdrop" onClick={close} aria-label="Cerrar"/><div className="sd-phone-modal">
+    <button className="sd-phone-close" onClick={close}><X size={18}/></button>
+    <span className="sd-phone-icon"><Smartphone size={24}/></span>
+    <h2>Escaneá con tu teléfono</h2>
+    <p>Leé este QR con la cámara del celular. Sacá la foto y el movimiento va a aparecer automáticamente en esta computadora.</p>
+    <img src={data.qr} alt="QR para abrir el escáner en el teléfono"/>
+    <strong>{data.status}</strong>
+    <small>La sesión vence en 10 minutos.</small>
+  </div></>
+}
+
+function MobileScanMode({token}:{token:string}){
+  const ref=useRef<HTMLInputElement>(null);
+  const [status,setStatus]=useState<'ready'|'processing'|'done'|'error'>('ready');
+  const [message,setMessage]=useState('');
+  const capture=async(file:File)=>{
+    setStatus('processing');setMessage('Procesando…');
+    try{
+      await fetch('/api/scan-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set',token,status:'processing'})});
+      const image=await fileToDataUrl(file);
+      const r=await fetch('/api/receipt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});
+      const d=await r.json();if(!r.ok)throw new Error(d.error||'No pude leer el documento.');
+      const save=await fetch('/api/scan-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set',token,status:'ready',result:d.result})});
+      if(!save.ok)throw new Error('La sesión venció.');
+      setStatus('done');setMessage('Listo. Ya apareció en tu computadora.');
+    }catch(e){
+      const text=e instanceof Error?e.message:'No pude procesar la foto.';
+      setStatus('error');setMessage(text);
+      fetch('/api/scan-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set',token,status:'error',error:text})}).catch(()=>{});
+    }
+  };
+  return <main className="sd-mobile-scanner"><div className="sd-mobile-scanner-card">
+    <div className="sd-brand-mark">C</div>
+    <span className="sd-phone-icon"><ScanLine size={30}/></span>
+    <h1>Escanear documento</h1>
+    <p>Sacá una foto clara del ticket, factura o comprobante.</p>
+    {status==='ready'&&<button className="sd-btn primary sd-camera-big" onClick={()=>ref.current?.click()}><Camera size={19}/> Abrir cámara</button>}
+    {status==='processing'&&<div className="sd-scan-progress">Procesando la foto…</div>}
+    {status==='done'&&<div className="sd-scan-success">{message}</div>}
+    {status==='error'&&<><div className="sd-scan-error">{message}</div><button className="sd-btn primary" onClick={()=>{setStatus('ready');setMessage('')}}>Intentar de nuevo</button></>}
+    <input ref={ref} hidden type="file" accept="image/*" capture="environment" onChange={e=>e.target.files?.[0]&&capture(e.target.files[0])}/>
+    <small>Podés cerrar esta pantalla cuando termine.</small>
+  </div></main>
 }
 
 function AgentPanel({msgs,ask,busy,close}:{msgs:Msg[];ask:(q:string)=>void;busy:boolean;close:()=>void}){
