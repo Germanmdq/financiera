@@ -5,6 +5,7 @@ import {ChatComposer,ChatDictationButton,useChatDictation} from '@astryxdesign/c
 import {
   Activity as ActivityIcon,
   BarChart3,
+  ArrowLeft,
   ArrowUp,
   Camera,
   ChevronDown,
@@ -38,6 +39,7 @@ const previousMonth='2026-08';
 
 export default function Page(){
   const [view,setView]=useState<View>('home');
+  const [selectedCategory,setSelectedCategory]=useState<string|null>(null);
   const [agentOpen,setAgentOpen]=useState(false);
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [txs,setTxs]=useState<Tx[]>(seedTransactions);
@@ -56,7 +58,8 @@ export default function Page(){
   const previousTotal=useMemo(()=>txs.filter(t=>t.date.startsWith(previousMonth)).reduce((s,t)=>s+t.amount,0),[txs]);
   const addTx=(t:Omit<Tx,'id'>)=>setTxs(v=>[{...t,id:crypto.randomUUID()},...v]);
 
-  const navigate=(next:View)=>{setView(next);setSidebarOpen(false)};
+  const navigate=(next:View)=>{setView(next);if(next!=='categories')setSelectedCategory(null);setSidebarOpen(false)};
+  const openCategory=(category:string)=>{setSelectedCategory(category);setView('categories');setSidebarOpen(false)};
 
   const ask=async(q:string)=>{
     const clean=q.trim();
@@ -144,10 +147,10 @@ export default function Page(){
       </header>
 
       <div className="sd-page"><div className="sd-container">
-        {view==='home'&&<DashboardHome monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={navigate} openAgent={()=>setAgentOpen(true)}/>} 
+        {view==='home'&&<DashboardHome monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={navigate} openCategory={openCategory} openAgent={()=>setAgentOpen(true)}/>} 
         {view==='stats'&&<StatsView txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
         {view==='expenses'&&<ExpensesView txs={txs} monthTotal={monthTotal}/>} 
-        {view==='categories'&&<CategoriesView txs={txs}/>} 
+        {view==='categories'&&<CategoriesView txs={txs} selectedCategory={selectedCategory} openCategory={openCategory} back={()=>setSelectedCategory(null)}/>} 
         {view==='add'&&<AddView manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
         {view==='accounts'&&<AccountsView go={navigate}/>} 
       </div></div>
@@ -166,7 +169,7 @@ export default function Page(){
   </div>
 }
 
-function DashboardHome({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:number;previousTotal:number;txs:Tx[];go:(v:View)=>void;openAgent:()=>void}){
+function DashboardHome({monthTotal,previousTotal,txs,go,openCategory,openAgent}:{monthTotal:number;previousTotal:number;txs:Tx[];go:(v:View)=>void;openCategory:(category:string)=>void;openAgent:()=>void}){
   const current=txs.filter(t=>t.date.startsWith(currentMonth));
   const delta=previousTotal?Math.round(((monthTotal-previousTotal)/previousTotal)*100):0;
   const categories=categorySummary(current).slice(0,6);
@@ -194,11 +197,12 @@ function DashboardHome({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:n
       <section className="sd-card">
         <CardHead title="Categorías principales" subtitle="Septiembre" action={<button onClick={()=>go('categories')}>Ver todas</button>}/>
         <div className="sd-category-cards">
-          {categories.slice(0,4).map((c,i)=><article className="sd-category-card-item" key={c.category}>
+          {categories.slice(0,4).map((c,i)=><button className="sd-category-card-item" key={c.category} onClick={()=>openCategory(c.category)}>
             <span className="sd-category-index">{String(i+1).padStart(2,'0')}</span>
             <div><b>{c.category}</b><small>{c.count} movimiento{c.count===1?'':'s'}</small></div>
             <strong>{money(c.total)}</strong>
-          </article>)}
+            <ChevronRight className="sd-category-chevron" size={18}/>
+          </button>)}
         </div>
       </section>
 
@@ -269,9 +273,37 @@ function ExpensesView({txs,monthTotal}:{txs:Tx[];monthTotal:number}){
   return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Mis gastos</h1><p>{current.length} movimientos en septiembre · {money(monthTotal)}</p></div></div><section className="sd-card"><CardHead title="Movimientos" subtitle="Agrupados por categoría"/><CategorizedTxList items={txs}/></section></section>
 }
 
-function CategoriesView({txs}:{txs:Tx[]}){
-  const categories=categorySummary(txs.filter(t=>t.date.startsWith(currentMonth)));
-  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Categorías</h1><p>Cómo se distribuyen tus gastos este mes.</p></div></div><div className="sd-category-card-grid">{categories.map((c,i)=><article className="sd-category-big-card" key={c.category}><span>{String(i+1).padStart(2,'0')}</span><h3>{c.category}</h3><strong>{money(c.total)}</strong><small>{c.count} movimiento{c.count===1?'':'s'}</small></article>)}</div></section>
+function CategoriesView({txs,selectedCategory,openCategory,back}:{txs:Tx[];selectedCategory:string|null;openCategory:(category:string)=>void;back:()=>void}){
+  const current=txs.filter(t=>t.date.startsWith(currentMonth));
+  const categories=categorySummary(current);
+  if(selectedCategory){
+    const all=txs.filter(t=>t.category===selectedCategory).sort((a,b)=>b.date.localeCompare(a.date));
+    const month=all.filter(t=>t.date.startsWith(currentMonth));
+    const previous=all.filter(t=>t.date.startsWith(previousMonth));
+    const monthTotal=month.reduce((s,t)=>s+t.amount,0);
+    const previousTotal=previous.reduce((s,t)=>s+t.amount,0);
+    const delta=previousTotal?Math.round(((monthTotal-previousTotal)/previousTotal)*100):null;
+    const sources=Object.entries(month.reduce<Record<string,number>>((acc,t)=>{acc[t.source]=(acc[t.source]||0)+t.amount;return acc},{})).sort((a,b)=>b[1]-a[1]);
+    const months=['2026-07','2026-08','2026-09'].map(key=>({label:key==='2026-07'?'Jul':key==='2026-08'?'Ago':'Sep',value:all.filter(t=>t.date.startsWith(key)).reduce((s,t)=>s+t.amount,0)}));
+    const max=Math.max(...months.map(m=>m.value),1);
+    return <section className="sd-stack">
+      <div className="sd-category-detail-head"><button className="sd-back-button" onClick={back}><ArrowLeft size={17}/> Categorías</button><div><h1>{selectedCategory}</h1><p>Detalle de gastos de septiembre.</p></div></div>
+      <div className="sd-kpi-grid compact">
+        <Metric title="Total septiembre" value={money(monthTotal)} note={`${month.length} movimiento${month.length===1?'':'s'}`} />
+        <Metric title="Agosto" value={money(previousTotal)} note={`${previous.length} movimiento${previous.length===1?'':'s'}`} />
+        <Metric title="Variación" value={delta===null?'—':`${delta>=0?'+':''}${delta}%`} note="Contra agosto" />
+        <Metric title="Ticket promedio" value={month.length?money(Math.round(monthTotal/month.length)):'—'} note="Por movimiento" />
+      </div>
+      <div className="sd-category-detail-grid">
+        <section className="sd-card"><CardHead title="Movimientos" subtitle={`${month.length} en septiembre`}/><div className="sd-detail-tx-list">{month.map(t=><div className="sd-detail-tx" key={t.id}><span className="sd-tx-icon"><ShoppingBag size={16}/></span><div><b>{t.name}</b><small>{new Date(t.date+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'long'})} · {t.source}</small></div><strong>{money(t.amount)}</strong></div>)}</div></section>
+        <div className="sd-category-detail-side">
+          <section className="sd-card"><CardHead title="Evolución" subtitle="Últimos 3 meses"/><div className="sd-mini-bars">{months.map(m=><div key={m.label}><span>{money(m.value)}</span><div><i style={{height:`${Math.max(8,(m.value/max)*100)}%`}}/></div><b>{m.label}</b></div>)}</div></section>
+          <section className="sd-card"><CardHead title="Origen de los gastos" subtitle="Septiembre"/><div className="sd-source-breakdown">{sources.map(([source,total])=><div key={source}><span>{source}</span><b>{money(total)}</b></div>)}</div></section>
+        </div>
+      </div>
+    </section>
+  }
+  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Categorías</h1><p>Cómo se distribuyen tus gastos este mes. Tocá una categoría para ver el detalle.</p></div></div><div className="sd-category-card-grid">{categories.map((c,i)=><button className="sd-category-big-card" key={c.category} onClick={()=>openCategory(c.category)}><span>{String(i+1).padStart(2,'0')}</span><h3>{c.category}</h3><strong>{money(c.total)}</strong><small>{c.count} movimiento{c.count===1?'':'s'}</small><ChevronRight className="sd-category-big-chevron" size={18}/></button>)}</div></section>
 }
 
 function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){
