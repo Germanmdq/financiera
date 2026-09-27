@@ -183,37 +183,33 @@ function DashboardHome({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:n
       <Metric title="Mayor categoría" value={categories[0]?.category||'—'} note={categories[0]?money(categories[0].total):'Sin datos'} />
     </div>
 
-    <div className="sd-workspace-grid">
-      <aside className="sd-section-rail">
-        <div className="sd-section-rail-head"><span>SECCIONES</span><b>Tu panel</b></div>
-        <button onClick={()=>go('add')}><span><Plus size={18}/></span><div><b>Cargar</b><small>Ticket, PDF o manual</small></div><ChevronRight size={16}/></button>
-        <button onClick={()=>go('stats')}><span><BarChart3 size={18}/></span><div><b>Estadísticas</b><small>Comparaciones y evolución</small></div><ChevronRight size={16}/></button>
-        <button onClick={()=>go('expenses')}><span><ShoppingBag size={18}/></span><div><b>Mis gastos</b><small>Movimientos y recurrencias</small></div><ChevronRight size={16}/></button>
-        <button onClick={()=>go('categories')}><span><Tags size={18}/></span><div><b>Categorías</b><small>Rubros y totales</small></div><ChevronRight size={16}/></button>
-        <button onClick={()=>go('accounts')}><span><WalletCards size={18}/></span><div><b>Fuentes</b><small>Bancos y billeteras</small></div><ChevronRight size={16}/></button>
-      </aside>
+    <div className="sd-quick-grid">
+      <button className="sd-quick-card" onClick={()=>go('add')}><span><Plus size={21}/></span><div><b>Cargar</b><small>Ticket, PDF o manual</small></div><ChevronRight size={18}/></button>
+      <button className="sd-quick-card" onClick={()=>go('stats')}><span><BarChart3 size={21}/></span><div><b>Estadísticas</b><small>Gráficos y evolución</small></div><ChevronRight size={18}/></button>
+      <button className="sd-quick-card" onClick={()=>go('expenses')}><span><ShoppingBag size={21}/></span><div><b>Mis gastos</b><small>Todos los movimientos</small></div><ChevronRight size={18}/></button>
+      <button className="sd-quick-card" onClick={()=>go('categories')}><span><Tags size={21}/></span><div><b>Categorías</b><small>Rubros y totales</small></div><ChevronRight size={18}/></button>
+    </div>
 
-      <div className="sd-main-cards">
-        <section className="sd-card">
-          <CardHead title="Actividad por categoría" subtitle="Septiembre" action={<button onClick={()=>go('categories')}>Ver todo</button>}/>
-          <div className="sd-category-cards">
-            {categories.map((c,i)=><article className="sd-category-card-item" key={c.category}>
-              <span className="sd-category-index">{String(i+1).padStart(2,'0')}</span>
-              <div><b>{c.category}</b><small>{c.count} movimiento{c.count===1?'':'s'}</small></div>
-              <strong>{money(c.total)}</strong>
-            </article>)}
-          </div>
-        </section>
+    <div className="sd-home-grid">
+      <section className="sd-card">
+        <CardHead title="Categorías principales" subtitle="Septiembre" action={<button onClick={()=>go('categories')}>Ver todas</button>}/>
+        <div className="sd-category-cards">
+          {categories.slice(0,4).map((c,i)=><article className="sd-category-card-item" key={c.category}>
+            <span className="sd-category-index">{String(i+1).padStart(2,'0')}</span>
+            <div><b>{c.category}</b><small>{c.count} movimiento{c.count===1?'':'s'}</small></div>
+            <strong>{money(c.total)}</strong>
+          </article>)}
+        </div>
+      </section>
 
-        <section className="sd-card">
-          <CardHead title="Próximos pagos" subtitle="Próximos 12 días"/>
-          <div className="sd-payment-cards">
-            <Payment date="03 oct" name="Visa Santander" amount="$ 684.320"/>
-            <Payment date="05 oct" name="Colegio San José" amount="$ 185.000"/>
-            <Payment date="08 oct" name="Servicios" amount="$ 90.170"/>
-          </div>
-        </section>
-      </div>
+      <section className="sd-card">
+        <CardHead title="Próximos pagos" subtitle="Próximos 12 días"/>
+        <div className="sd-payment-cards">
+          <Payment date="03 oct" name="Visa Santander" amount="$ 684.320"/>
+          <Payment date="05 oct" name="Colegio San José" amount="$ 185.000"/>
+          <Payment date="08 oct" name="Servicios" amount="$ 90.170"/>
+        </div>
+      </section>
     </div>
 
     <section className="sd-card">
@@ -243,6 +239,11 @@ function StatsView({txs,monthTotal,previousTotal}:{txs:Tx[];monthTotal:number;pr
   const recurring=current.filter(t=>recurringNames.includes(t.name)).reduce((s,t)=>s+t.amount,0);
   const daily=Math.round(monthTotal/26);
   const average=current.length?Math.round(monthTotal/current.length):0;
+  const donutTop=categories.slice(0,5);
+  const donutTotal=Math.max(1,donutTop.reduce((s,c)=>s+c.total,0));
+  let angle=0;
+  const palette=['#17191f','#5865f2','#7c8aa5','#aab2c3','#d8dde7'];
+  const donutStops=donutTop.map((c,i)=>{const start=angle;angle+=c.total/donutTotal*360;return `${palette[i]} ${start}deg ${angle}deg`}).join(',');
   return <section className="sd-stack">
     <div className="sd-overview-head"><div><h1>Estadísticas</h1><p>Evolución, distribución y comportamiento de tus gastos.</p></div></div>
     <div className="sd-kpi-grid compact">
@@ -252,9 +253,10 @@ function StatsView({txs,monthTotal,previousTotal}:{txs:Tx[];monthTotal:number;pr
       <Metric title="Recurrentes" value={money(recurring)} note="Este mes" />
     </div>
     <div className="sd-stats-grid">
+      <section className="sd-card sd-chart-card"><CardHead title="Distribución por categoría" subtitle="Septiembre"/><div className="sd-donut-wrap"><div className="sd-donut" style={{background:`conic-gradient(${donutStops})`}}><div><strong>{money(monthTotal)}</strong><span>Total</span></div></div><div className="sd-donut-legend">{donutTop.map((c,i)=><div key={c.category}><i style={{background:palette[i]}}/><span>{c.category}</span><b>{Math.round(c.total/donutTotal*100)}%</b></div>)}</div></div></section>
       <section className="sd-card sd-chart-card"><CardHead title="Evolución mensual" subtitle="Últimos 3 meses"/><div className="sd-bar-chart">{months.map(m=><div className="sd-bar-col" key={m.label}><div className="sd-bar-value">{money(m.value)}</div><div className="sd-bar-track"><div className="sd-bar-fill" style={{height:`${Math.max(12,(m.value/maxMonth)*100)}%`}}/></div><span>{m.label}</span></div>)}</div></section>
-      <section className="sd-card sd-chart-card"><CardHead title="Peso por categoría" subtitle="Top 6 de septiembre"/><div className="sd-share-list">{categories.slice(0,6).map(c=><div className="sd-share-row" key={c.category}><div><b>{c.category}</b><span>{money(c.total)}</span></div><div className="sd-share-track"><span style={{width:`${Math.max(8,(c.total/topMax)*100)}%`}}/></div></div>)}</div></section>
     </div>
+    <section className="sd-card"><CardHead title="Peso por categoría" subtitle="Top 6 de septiembre"/><div className="sd-share-list">{categories.slice(0,6).map(c=><div className="sd-share-row" key={c.category}><div><b>{c.category}</b><span>{money(c.total)}</span></div><div className="sd-share-track"><span style={{width:`${Math.max(8,(c.total/topMax)*100)}%`}}/></div></div>)}</div></section>
     <div className="sd-stats-grid secondary">
       <section className="sd-card"><CardHead title="Indicadores" subtitle="Lectura rápida"/><div className="sd-stat-cards"><div><span>Mayor categoría</span><b>{categories[0]?.category||'—'}</b><strong>{categories[0]?money(categories[0].total):'—'}</strong></div><div><span>Categorías activas</span><b>{categories.length}</b><strong>este mes</strong></div><div><span>Ticket promedio</span><b>{money(average)}</b><strong>por movimiento</strong></div></div></section>
       <section className="sd-card"><CardHead title="Comparación" subtitle="Septiembre vs agosto"/><div className="sd-compare-card"><div><span>Agosto</span><b>{money(previousTotal)}</b></div><div className="sd-compare-arrow">→</div><div><span>Septiembre</span><b>{money(monthTotal)}</b></div><strong className={delta>=0?'up':'down'}>{delta>=0?'+':''}{delta}%</strong></div></section>
@@ -275,18 +277,11 @@ function CategoriesView({txs}:{txs:Tx[]}){
 function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){
   return <section className="sd-stack">
     <div className="sd-overview-head"><div><h1>Cargar</h1><p>Agregá movimientos desde ticket, PDF, banco o carga manual.</p></div></div>
-    <div className="sd-dashboard-grid add-grid">
-      <section className="sd-card sd-scan-card" onClick={()=>scanRef.current?.click()} role="button" tabIndex={0}>
-        <div className="sd-scan-icon"><ScanLine size={24}/></div><h2>Escanear ticket</h2><p>Usá la cámara para leer comercio, fecha, importe y forma de pago.</p><button className="sd-btn primary"><Camera size={15}/> Abrir cámara</button>
-      </section>
-      <section className="sd-card"><CardHead title="Otras formas de carga" subtitle="Elegí una opción"/><div className="sd-source-grid">
-        <Source icon={FileText} title="Subir PDF" copy="Resumen o factura" click={()=>pdfRef.current?.click()}/>
-        <Source icon={CircleDollarSign} title="Carga manual" copy="Efectivo o gasto rápido" click={()=>document.getElementById('manual')?.scrollIntoView({behavior:'smooth'})}/>
-        <Source icon={Mail} title="Mail" copy="Facturas y comprobantes" click={()=>setNotice('La conexión con Gmail/Outlook se habilita con autorización OAuth.')}/>
-        <Source icon={Landmark} title="Banco" copy="Cuentas y tarjetas" click={()=>setNotice('La conexión bancaria necesita autorización segura del proveedor.')}/>
-        <Source icon={Wallet} title="Billetera" copy="Mercado Pago, Ualá y más" click={()=>setNotice('La conexión de billeteras queda preparada para autorización.')}/>
-        <Source icon={ReceiptText} title="Factura / QR" copy="Leer con cámara" click={()=>scanRef.current?.click()}/>
-      </div></section>
+    <div className="sd-load-card-grid">
+      <button className="sd-load-card primary" onClick={()=>scanRef.current?.click()}><span><ScanLine size={26}/></span><div><b>Escanear ticket</b><small>Cámara, factura o QR</small></div><ChevronRight size={18}/></button>
+      <button className="sd-load-card" onClick={()=>pdfRef.current?.click()}><span><FileText size={26}/></span><div><b>Subir PDF</b><small>Resumen, factura o tarjeta</small></div><ChevronRight size={18}/></button>
+      <button className="sd-load-card" onClick={()=>document.getElementById('manual')?.scrollIntoView({behavior:'smooth'})}><span><CircleDollarSign size={26}/></span><div><b>Carga manual</b><small>Efectivo o gasto rápido</small></div><ChevronRight size={18}/></button>
+      <button className="sd-load-card" onClick={()=>setNotice('Conexiones disponibles: banco, billetera y mail.')}><span><Landmark size={26}/></span><div><b>Conectar una fuente</b><small>Banco, billetera o mail</small></div><ChevronRight size={18}/></button>
     </div>
     <input ref={scanRef} hidden type="file" accept="image/*" capture="environment" onChange={e=>e.target.files?.[0]&&scan(e.target.files[0])}/>
     <input ref={pdfRef} hidden type="file" accept="application/pdf" onChange={e=>e.target.files?.[0]&&pdf(e.target.files[0])}/>

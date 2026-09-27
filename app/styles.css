@@ -75,3 +75,26 @@ button{cursor:pointer;color:inherit}
 
 @media(max-width:1100px){.sd-workspace-grid{grid-template-columns:1fr}.sd-section-rail{position:static;display:flex;overflow-x:auto;gap:10px;padding:0;border:0;background:transparent;box-shadow:none}.sd-section-rail-head{display:none}.sd-section-rail>button{flex:0 0 180px;min-height:126px;border:1px solid var(--border)!important;border-radius:14px;background:#fff;display:flex;flex-direction:column;align-items:flex-start}.sd-section-rail>button>svg{display:none}.sd-main-cards{grid-template-columns:1fr}}
 @media(max-width:760px){.sd-overview-head h1{font-size:27px}.sd-overview-head p{font-size:13px}.sd-section-rail{margin:0 -14px;padding:0 14px 4px;scrollbar-width:none}.sd-section-rail::-webkit-scrollbar{display:none}.sd-section-rail>button{flex-basis:168px;min-height:132px;padding:14px}.sd-section-rail>button>span{width:44px;height:44px}.sd-category-cards{grid-template-columns:1fr;padding:12px}.sd-category-card-item{min-height:116px;padding:15px}.sd-card-head h2{font-size:17px}.sd-payment-cards{padding:12px}}
+
+/* Simplified dashboard composition */
+.sd-quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.sd-quick-card{border:1px solid var(--border);background:#fff;border-radius:16px;min-height:112px;padding:18px;display:grid;grid-template-columns:48px minmax(0,1fr) 18px;gap:12px;align-items:center;text-align:left;box-shadow:var(--shadow-card)}
+.sd-quick-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-strong)}
+.sd-quick-card>span{width:46px;height:46px;border-radius:12px;background:#f2f4f7;display:grid;place-items:center}
+.sd-quick-card b,.sd-quick-card small{display:block}.sd-quick-card b{font-size:15px}.sd-quick-card small{font-size:11px;color:var(--muted-fg);margin-top:4px}
+.sd-home-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr);gap:16px;align-items:start}
+
+.sd-donut-wrap{padding:24px;display:grid;grid-template-columns:minmax(240px,.9fr) minmax(260px,1.1fr);gap:30px;align-items:center}
+.sd-donut{width:240px;aspect-ratio:1;border-radius:50%;position:relative;margin:auto;box-shadow:inset 0 0 0 1px rgba(0,0,0,.03)}
+.sd-donut::after{content:"";position:absolute;inset:48px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--border)}
+.sd-donut>div{position:absolute;z-index:2;inset:0;display:grid;place-content:center;text-align:center;pointer-events:none}.sd-donut strong{font-size:22px;letter-spacing:-.7px}.sd-donut span{font-size:11px;color:var(--muted-fg);margin-top:3px}
+.sd-donut-legend{display:grid;gap:13px}.sd-donut-legend>div{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:9px;align-items:center;padding-bottom:11px;border-bottom:1px solid #eef0f2}.sd-donut-legend>div:last-child{border-bottom:0}.sd-donut-legend i{width:10px;height:10px;border-radius:50%}.sd-donut-legend span{font-size:13px}.sd-donut-legend b{font-size:13px}
+
+.sd-load-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.sd-load-card{border:1px solid var(--border);background:#fff;border-radius:18px;min-height:170px;padding:22px;display:grid;grid-template-columns:58px minmax(0,1fr) 20px;gap:16px;align-items:center;text-align:left;box-shadow:var(--shadow-card)}
+.sd-load-card.primary{background:#1c1f25;color:#fff;border-color:#1c1f25;box-shadow:var(--shadow-strong)}
+.sd-load-card>span{width:56px;height:56px;border-radius:15px;background:#f1f3f6;display:grid;place-items:center}.sd-load-card.primary>span{background:rgba(255,255,255,.12)}
+.sd-load-card b,.sd-load-card small{display:block}.sd-load-card b{font-size:20px;letter-spacing:-.4px}.sd-load-card small{font-size:12px;color:var(--muted-fg);margin-top:6px}.sd-load-card.primary small{color:rgba(255,255,255,.65)}
+
+@media(max-width:1100px){.sd-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sd-home-grid{grid-template-columns:1fr}.sd-donut-wrap{grid-template-columns:1fr 1fr}.sd-load-card-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.sd-quick-grid{display:flex;overflow-x:auto;gap:10px;margin:0 -14px;padding:0 14px 4px;scrollbar-width:none}.sd-quick-grid::-webkit-scrollbar{display:none}.sd-quick-card{flex:0 0 78%;min-height:116px}.sd-home-grid{grid-template-columns:1fr}.sd-donut-wrap{grid-template-columns:1fr;padding:18px}.sd-donut{width:210px}.sd-donut::after{inset:42px}.sd-load-card-grid{grid-template-columns:1fr}.sd-load-card{min-height:132px;padding:18px}.sd-load-card b{font-size:17px}}
