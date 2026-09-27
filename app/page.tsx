@@ -145,6 +145,14 @@ export default function Page(){
       </div></div>
     </main>
 
+    <nav className="sd-mobile-dock" aria-label="Navegación móvil">
+      <NavItem icon={Home} label="Inicio" active={view==='home'} onClick={()=>navigate('home')}/>
+      <NavItem icon={ActivityIcon} label="Actividad" active={view==='activity'} onClick={()=>navigate('activity')}/>
+      <button className="sd-mobile-plus" onClick={()=>navigate('add')} aria-label="Cargar"><Plus size={20}/></button>
+      <NavItem icon={WalletCards} label="Fuentes" active={view==='accounts'} onClick={()=>navigate('accounts')}/>
+      <button className={`sd-mobile-agent ${agentOpen?'active':''}`} onClick={()=>setAgentOpen(true)}><Sparkles size={17}/><span>Asistente</span></button>
+    </nav>
+
     <button className="sd-agent-fab" onClick={()=>setAgentOpen(true)}><Sparkles size={18}/><span>Asistente</span></button>
     {agentOpen&&<AgentPanel msgs={msgs} ask={ask} busy={busy} close={()=>setAgentOpen(false)}/>} 
   </div>
