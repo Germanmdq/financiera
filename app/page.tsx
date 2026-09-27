@@ -4,6 +4,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import {ChatComposer,ChatDictationButton,useChatDictation} from '@astryxdesign/core/Chat';
 import {
   Activity as ActivityIcon,
+  BarChart3,
   ArrowUp,
   Camera,
   ChevronDown,
@@ -21,6 +22,7 @@ import {
   Search,
   ShoppingBag,
   Sparkles,
+  Tags,
   Wallet,
   WalletCards,
   X,
@@ -112,8 +114,10 @@ export default function Page(){
       <nav className="sd-nav">
         <span className="sd-nav-label">GENERAL</span>
         <NavItem icon={Home} label="Inicio" active={view==='home'} onClick={()=>navigate('home')}/>
-        <NavItem icon={ActivityIcon} label="Actividad" active={view==='activity'} onClick={()=>navigate('activity')}/>
         <NavItem icon={Plus} label="Cargar" active={view==='add'} onClick={()=>navigate('add')}/>
+        <NavItem icon={BarChart3} label="Estadísticas" active={view==='activity'} onClick={()=>navigate('activity')}/>
+        <NavItem icon={ActivityIcon} label="Mis gastos" active={view==='activity'} onClick={()=>navigate('activity')}/>
+        <NavItem icon={Tags} label="Categorías" active={view==='activity'} onClick={()=>navigate('activity')}/>
         <NavItem icon={WalletCards} label="Fuentes" active={view==='accounts'} onClick={()=>navigate('accounts')}/>
       </nav>
 
@@ -175,26 +179,37 @@ function DashboardHome({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:n
       <Metric title="Mayor categoría" value={categories[0]?.category||'—'} note={categories[0]?money(categories[0].total):'Sin datos'} />
     </div>
 
-    <div className="sd-dashboard-grid">
-      <section className="sd-card sd-card-large">
-        <CardHead title="Actividad por categoría" subtitle="Septiembre" action={<button onClick={()=>go('activity')}>Ver todo</button>}/>
-        <div className="sd-category-table">
-          {categories.map((c,i)=><div className="sd-category-table-row" key={c.category}>
-            <span className="sd-rank">{String(i+1).padStart(2,'0')}</span>
-            <div><b>{c.category}</b><small>{c.count} movimiento{c.count===1?'':'s'}</small></div>
-            <strong>{money(c.total)}</strong>
-          </div>)}
-        </div>
-      </section>
+    <div className="sd-workspace-grid">
+      <aside className="sd-section-rail">
+        <div className="sd-section-rail-head"><span>SECCIONES</span><b>Tu panel</b></div>
+        <button onClick={()=>go('add')}><span><Plus size={18}/></span><div><b>Cargar</b><small>Ticket, PDF o manual</small></div><ChevronRight size={16}/></button>
+        <button onClick={()=>go('activity')}><span><BarChart3 size={18}/></span><div><b>Estadísticas</b><small>Comparaciones y evolución</small></div><ChevronRight size={16}/></button>
+        <button onClick={()=>go('activity')}><span><ShoppingBag size={18}/></span><div><b>Mis gastos</b><small>Movimientos y recurrencias</small></div><ChevronRight size={16}/></button>
+        <button onClick={()=>go('activity')}><span><Tags size={18}/></span><div><b>Categorías</b><small>Rubros y totales</small></div><ChevronRight size={16}/></button>
+        <button onClick={()=>go('accounts')}><span><WalletCards size={18}/></span><div><b>Fuentes</b><small>Bancos y billeteras</small></div><ChevronRight size={16}/></button>
+      </aside>
 
-      <section className="sd-card">
-        <CardHead title="Próximos pagos" subtitle="Próximos 12 días"/>
-        <div className="sd-payment-list">
-          <Payment date="03 oct" name="Visa Santander" amount="$ 684.320"/>
-          <Payment date="05 oct" name="Colegio San José" amount="$ 185.000"/>
-          <Payment date="08 oct" name="Servicios" amount="$ 90.170"/>
-        </div>
-      </section>
+      <div className="sd-main-cards">
+        <section className="sd-card">
+          <CardHead title="Actividad por categoría" subtitle="Septiembre" action={<button onClick={()=>go('activity')}>Ver todo</button>}/>
+          <div className="sd-category-cards">
+            {categories.map((c,i)=><article className="sd-category-card-item" key={c.category}>
+              <span className="sd-category-index">{String(i+1).padStart(2,'0')}</span>
+              <div><b>{c.category}</b><small>{c.count} movimiento{c.count===1?'':'s'}</small></div>
+              <strong>{money(c.total)}</strong>
+            </article>)}
+          </div>
+        </section>
+
+        <section className="sd-card">
+          <CardHead title="Próximos pagos" subtitle="Próximos 12 días"/>
+          <div className="sd-payment-cards">
+            <Payment date="03 oct" name="Visa Santander" amount="$ 684.320"/>
+            <Payment date="05 oct" name="Colegio San José" amount="$ 185.000"/>
+            <Payment date="08 oct" name="Servicios" amount="$ 90.170"/>
+          </div>
+        </section>
+      </div>
     </div>
 
     <section className="sd-card">
