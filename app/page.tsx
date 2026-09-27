@@ -52,7 +52,6 @@ export default function Page(){
   const [manual,setManual]=useState({name:'',amount:'',category:'',source:'Efectivo'});
   const [mobileScanToken,setMobileScanToken]=useState<string|null>(null);
   const [phoneScan,setPhoneScan]=useState<{token:string;url:string;qr:string;status:string}|null>(null);
-  const scanRef=useRef<HTMLInputElement>(null);
   const pdfRef=useRef<HTMLInputElement>(null);
 
   useEffect(()=>{const saved=localStorage.getItem('finanzas.txs.v2');if(saved)try{setTxs(JSON.parse(saved))}catch{};const token=new URLSearchParams(window.location.search).get('scan');if(token)setMobileScanToken(token)},[]);
@@ -113,18 +112,6 @@ export default function Page(){
       setMsgs(v=>[...v,{role:'assistant',text:d.answer||d.error||'No pude responder.'}]);
     }catch{setMsgs(v=>[...v,{role:'assistant',text:'No pude conectar con el servidor.'}]);}
     finally{setBusy(false)}
-  };
-
-  const scan=async(file:File)=>{
-    setBusy(true);setNotice('Leyendo comprobante…');
-    try{
-      const image=await fileToDataUrl(file);
-      const r=await fetch('/api/receipt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});
-      const d=await r.json();if(!r.ok)throw new Error(d.error);
-      const x=d.result;
-      addTx({name:x.merchant||'Comprobante',amount:Number(x.amount)||0,date:x.date||new Date().toISOString().slice(0,10),category:x.category||'Otros',source:x.paymentMethod||'Ticket escaneado',notes:x.notes||''});
-      setNotice(`Listo: ${x.merchant||'comprobante'} · ${money(Number(x.amount)||0)}`);
-    }catch(e){setNotice(e instanceof Error?e.message:'No pude leer el ticket.')}finally{setBusy(false)}
   };
 
   const pdf=async(file:File)=>{
@@ -189,8 +176,8 @@ export default function Page(){
         {view==='expenses'&&<ExpensesView txs={txs} monthTotal={monthTotal}/>} 
         {view==='categories'&&<CategoriesView txs={txs} selectedCategory={selectedCategory} openCategory={openCategory} back={()=>setSelectedCategory(null)}/>} 
         {view==='investments'&&<InvestmentsView/>}
-        {view==='add'&&<AddView manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy} startPhoneScan={startPhoneScan}/>} 
-        {view==='accounts'&&<AccountsView go={navigate}/>} 
+        {view==='add'&&<AddView manual={manual} setManual={setManual} addTx={addTx} pdfRef={pdfRef} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy} startPhoneScan={startPhoneScan}/>} 
+        {view==='accounts'&&<AccountsView/>} 
       </div></div>
     </main>
 
@@ -364,16 +351,15 @@ function InvestmentsView(){
   </section>
 }
 
-function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy,startPhoneScan}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean;startPhoneScan:()=>Promise<void>}){
+function AddView({manual,setManual,addTx,pdfRef,pdf,notice,setNotice,busy,startPhoneScan}:{manual:any;setManual:any;addTx:any;pdfRef:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean;startPhoneScan:()=>Promise<void>}){
   return <section className="sd-stack">
     <div className="sd-overview-head"><div><h1>Cargar</h1><p>Agregá movimientos desde ticket, PDF, banco o carga manual.</p></div></div>
     <div className="sd-load-card-grid">
-      <div className="sd-load-card primary sd-scan-card-options"><span><ScanLine size={26}/></span><div><b>Escanear documentos</b><small>Usá la cámara de esta computadora o del teléfono</small><div className="sd-scan-actions"><button onClick={()=>scanRef.current?.click()}>Esta computadora</button><button onClick={()=>startPhoneScan()}><Smartphone size={15}/> Usar mi teléfono</button></div></div></div>
+      <button className="sd-load-card primary" onClick={()=>startPhoneScan()}><span><ScanLine size={26}/></span><div><b>Escanear con el teléfono</b><small>Escaneá el QR y sacá la foto desde el celular</small></div><Smartphone size={20}/></button>
       <button className="sd-load-card" onClick={()=>pdfRef.current?.click()}><span><FileText size={26}/></span><div><b>Subir documentos</b><small>PDF · CSV · TXT · Excel · Google Sheets</small></div><ChevronRight size={18}/></button>
       <button className="sd-load-card" onClick={()=>document.getElementById('manual')?.scrollIntoView({behavior:'smooth'})}><span><CircleDollarSign size={26}/></span><div><b>Carga manual</b><small>Efectivo o gasto rápido</small></div><ChevronRight size={18}/></button>
       <button className="sd-load-card" onClick={()=>setNotice('Conexiones disponibles: Google Sheets, banco, billetera y mail.')}><span><Landmark size={26}/></span><div><b>Conectar Google Sheets</b><small>Sincronizá una hoja directamente</small></div><ChevronRight size={18}/></button>
     </div>
-    <input ref={scanRef} hidden type="file" accept="image/*" capture="environment" onChange={e=>e.target.files?.[0]&&scan(e.target.files[0])}/>
     <input ref={pdfRef} hidden type="file" accept=".pdf,.csv,.txt,.xls,.xlsx,application/pdf,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e=>e.target.files?.[0]&&pdf(e.target.files[0])}/>
     {notice&&<div className="sd-notice">{busy?'Procesando… ':''}{notice}</div>}
     <section className="sd-card" id="manual"><CardHead title="Carga manual" subtitle="Ingresá los datos del movimiento"/><div className="sd-form-grid">
@@ -385,9 +371,28 @@ function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotic
   </section>
 }
 
-function AccountsView({go}:{go:(v:View)=>void}){
-  const accounts=[['Santander','Cuenta + Visa','$ 1.284.300'],['Banco Galicia','Caja de ahorro','$ 842.900'],['BBVA','Mastercard','$ 386.120'],['Mercado Pago','Billetera','$ 214.800'],['Ualá','Billetera','$ 98.700']];
-  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Fuentes</h1><p>Cuentas, tarjetas y billeteras conectadas.</p></div><button className="sd-btn primary" onClick={()=>go('add')}><Plus size={15}/> Agregar fuente</button></div><section className="sd-card"><CardHead title="Mis cuentas" subtitle={`${accounts.length} fuentes`}/><div className="sd-account-table">{accounts.map(([name,type,balance])=><button key={name} className="sd-account-row"><span className="sd-account-icon"><Landmark size={17}/></span><div><b>{name}</b><small>{type}</small></div><strong>{balance}</strong><ChevronRight size={16}/></button>)}</div></section></section>
+function AccountsView(){
+  const [adding,setAdding]=useState(false);
+  const [message,setMessage]=useState('');
+  const accounts=[
+    ['Visa Santander','Tarjeta de crédito','Conectada'],
+    ['Banco Galicia','Cuenta bancaria','Conectada'],
+    ['Mastercard BBVA','Tarjeta de crédito','Conectada'],
+    ['Mercado Pago','Billetera','Conectada'],
+    ['Ualá','Billetera','Conectada'],
+  ];
+  const options=[
+    ['Banco','Cuenta bancaria'],
+    ['Visa / Mastercard','Tarjeta de crédito'],
+    ['Mercado Pago / Ualá','Billetera'],
+    ['Google Sheets','Hoja de cálculo'],
+    ['Mail','Facturas y comprobantes'],
+  ];
+  return <section className="sd-stack">
+    <div className="sd-overview-head"><div><h1>Fuentes</h1><p>Todo lo que Cifra tiene conectado para leer tus movimientos.</p></div><button className="sd-btn primary" onClick={()=>setAdding(v=>!v)}><Plus size={15}/> Agregar fuente</button></div>
+    {adding&&<section className="sd-card"><CardHead title="Agregar fuente" subtitle="Conectá una cuenta, tarjeta o servicio"/><div className="sd-source-connect-grid">{options.map(([name,type])=><button key={name} className="sd-source-connect-card" onClick={()=>setMessage(`${name}: conexión preparada para autorizar desde acá.`)}><span className="sd-account-icon"><Landmark size={17}/></span><div><b>{name}</b><small>{type}</small></div><ChevronRight size={16}/></button>)}</div>{message&&<div className="sd-source-connect-note">{message}</div>}</section>}
+    <section className="sd-card"><CardHead title="Fuentes conectadas" subtitle={`${accounts.length} activas`}/><div className="sd-account-table">{accounts.map(([name,type,status])=><button key={name} className="sd-account-row"><span className="sd-account-icon"><Landmark size={17}/></span><div><b>{name}</b><small>{type}</small></div><strong>{status}</strong><ChevronRight size={16}/></button>)}</div></section>
+  </section>
 }
 
 function PhoneScanModal({data,close}:{data:{token:string;url:string;qr:string;status:string};close:()=>void}){
