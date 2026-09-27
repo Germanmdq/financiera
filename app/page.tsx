@@ -24,13 +24,14 @@ import {
   ShoppingBag,
   Sparkles,
   Tags,
+  TrendingUp,
   Wallet,
   WalletCards,
   X,
 } from 'lucide-react';
 import {seedTransactions,type Tx} from './data';
 
-type View='home'|'stats'|'expenses'|'categories'|'add'|'accounts';
+type View='home'|'stats'|'expenses'|'categories'|'investments'|'add'|'accounts';
 type Msg={role:'user'|'assistant',text:string};
 
 const money=(n:number)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n);
@@ -105,7 +106,7 @@ export default function Page(){
     }catch(e){setNotice(e instanceof Error?e.message:'No pude analizar el PDF.')}finally{setBusy(false)}
   };
 
-  const title=view==='home'?'Panel general':view==='stats'?'Estadísticas':view==='expenses'?'Mis gastos':view==='categories'?'Categorías':view==='add'?'Cargar':'Fuentes';
+  const title=view==='home'?'Panel general':view==='stats'?'Estadísticas':view==='expenses'?'Mis gastos':view==='categories'?'Categorías':view==='investments'?'Inversiones':view==='add'?'Cargar':'Fuentes';
 
   return <div className="sd-app">
     <button className={`sd-mobile-backdrop ${sidebarOpen?'show':''}`} onClick={()=>setSidebarOpen(false)} aria-label="Cerrar menú"/>
@@ -123,6 +124,7 @@ export default function Page(){
         <NavItem icon={BarChart3} label="Estadísticas" active={view==='stats'} onClick={()=>navigate('stats')}/>
         <NavItem icon={ActivityIcon} label="Mis gastos" active={view==='expenses'} onClick={()=>navigate('expenses')}/>
         <NavItem icon={Tags} label="Categorías" active={view==='categories'} onClick={()=>navigate('categories')}/>
+        <NavItem icon={TrendingUp} label="Inversiones" active={view==='investments'} onClick={()=>navigate('investments')}/>
         <NavItem icon={WalletCards} label="Fuentes" active={view==='accounts'} onClick={()=>navigate('accounts')}/>
       </nav>
 
@@ -151,6 +153,7 @@ export default function Page(){
         {view==='stats'&&<StatsView txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
         {view==='expenses'&&<ExpensesView txs={txs} monthTotal={monthTotal}/>} 
         {view==='categories'&&<CategoriesView txs={txs} selectedCategory={selectedCategory} openCategory={openCategory} back={()=>setSelectedCategory(null)}/>} 
+        {view==='investments'&&<InvestmentsView/>}
         {view==='add'&&<AddView manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
         {view==='accounts'&&<AccountsView go={navigate}/>} 
       </div></div>
@@ -304,6 +307,25 @@ function CategoriesView({txs,selectedCategory,openCategory,back}:{txs:Tx[];selec
     </section>
   }
   return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Categorías</h1><p>Categorías principales con todos los gastos que contienen.</p></div></div><div className="sd-category-card-grid">{categories.map((c,i)=>{const names=[...new Set(current.filter(t=>parentCategory(t.category)===c.category).map(t=>t.name))];return <button className="sd-category-big-card" key={c.category} onClick={()=>openCategory(c.category)}><span>{String(i+1).padStart(2,'0')}</span><h3>{c.category}</h3><strong>{money(c.total)}</strong><small>{c.count} movimiento{c.count===1?'':'s'}</small><div className="sd-category-preview">{names.slice(0,5).map(name=><em key={name}>{name}</em>)}{names.length>5&&<em>+{names.length-5} más</em>}</div><ChevronRight className="sd-category-big-chevron" size={18}/></button>})}</div></section>
+}
+
+function InvestmentsView(){
+  const baskets=[
+    {name:'Conservadora',copy:'Prioriza disponibilidad y menor volatilidad.',items:[['Liquidez','Fondos money market, cauciones o saldo remunerado'],['Renta fija','Bonos cortos, letras y fondos de renta fija']]},
+    {name:'Balanceada',copy:'Combina estabilidad con crecimiento moderado.',items:[['Bonos / ON','Obligaciones negociables y deuda diversificada'],['ETFs / índices','Exposición amplia a mercados e índices']]},
+    {name:'Crecimiento',copy:'Mayor exposición a activos de largo plazo.',items:[['Acciones','Empresas locales o internacionales'],['Alto riesgo','Cripto u otros activos de mayor volatilidad']]},
+  ];
+  return <section className="sd-stack">
+    <div className="sd-overview-head"><div><h1>Inversiones</h1><p>Tres canastas para separar objetivos, riesgo y horizonte.</p></div></div>
+    <div className="sd-investment-grid">
+      {baskets.map((basket,i)=><section className="sd-investment-basket" key={basket.name}>
+        <div className="sd-investment-basket-head"><span>{String(i+1).padStart(2,'0')}</span><div><h2>{basket.name}</h2><p>{basket.copy}</p></div></div>
+        <div className="sd-investment-subgrid">
+          {basket.items.map(([name,copy])=><button className="sd-investment-subcard" key={name}><div><b>{name}</b><small>{copy}</small></div><ChevronRight size={18}/></button>)}
+        </div>
+      </section>)}
+    </div>
+  </section>
 }
 
 function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){

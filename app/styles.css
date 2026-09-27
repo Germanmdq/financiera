@@ -99,6 +99,18 @@ button{cursor:pointer;color:inherit}
 @media(max-width:1100px){.sd-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sd-home-grid{grid-template-columns:1fr}.sd-donut-wrap{grid-template-columns:1fr 1fr}.sd-load-card-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.sd-quick-grid{display:flex;overflow-x:auto;gap:10px;margin:0 -14px;padding:0 14px 4px;scrollbar-width:none}.sd-quick-grid::-webkit-scrollbar{display:none}.sd-quick-card{flex:0 0 78%;min-height:116px}.sd-home-grid{grid-template-columns:1fr}.sd-donut-wrap{grid-template-columns:1fr;padding:18px}.sd-donut{width:210px}.sd-donut::after{inset:42px}.sd-load-card-grid{grid-template-columns:1fr}.sd-load-card{min-height:132px;padding:18px}.sd-load-card b{font-size:17px}}
 
+/* Investments */
+.sd-investment-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.sd-investment-basket{border:1px solid var(--border);background:#fff;border-radius:18px;overflow:hidden;box-shadow:var(--shadow-card);display:flex;flex-direction:column;min-height:330px}
+.sd-investment-basket-head{padding:22px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:42px minmax(0,1fr);gap:14px;align-items:start}
+.sd-investment-basket-head>span{width:40px;height:40px;border-radius:11px;background:#f1f3f6;display:grid;place-items:center;font-size:11px;font-weight:800;color:#7f8793}
+.sd-investment-basket-head h2{margin:0;font-size:21px;letter-spacing:-.5px}.sd-investment-basket-head p{margin:6px 0 0;font-size:12px;line-height:1.45;color:var(--muted-fg)}
+.sd-investment-subgrid{padding:16px;display:grid;gap:12px;flex:1}
+.sd-investment-subcard{border:1px solid var(--border);background:#fafbfc;border-radius:14px;padding:17px;display:grid;grid-template-columns:minmax(0,1fr) 18px;gap:12px;align-items:center;text-align:left;min-height:100px}
+.sd-investment-subcard:hover{background:#fff;box-shadow:var(--shadow-card)}.sd-investment-subcard b,.sd-investment-subcard small{display:block}.sd-investment-subcard b{font-size:15px}.sd-investment-subcard small{font-size:11px;line-height:1.45;color:var(--muted-fg);margin-top:5px}
+@media(max-width:1100px){.sd-investment-grid{grid-template-columns:1fr 1fr}.sd-investment-basket:last-child{grid-column:1/-1}}
+@media(max-width:760px){.sd-investment-grid{grid-template-columns:1fr}.sd-investment-basket:last-child{grid-column:auto}.sd-investment-basket{min-height:0}.sd-investment-basket-head{padding:18px}.sd-investment-subgrid{padding:12px}.sd-investment-subcard{min-height:88px}}
+
 /* Category navigation + detail */
 .sd-home-grid{align-items:stretch}
 .sd-home-grid>.sd-card{height:100%;display:flex;flex-direction:column}
