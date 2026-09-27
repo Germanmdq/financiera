@@ -218,7 +218,7 @@ function DashboardHome({monthTotal,previousTotal,txs,go,openCategory,openAgent}:
 
     <section className="sd-card">
       <CardHead title="Movimientos" subtitle="Agrupados por categoría" action={<button onClick={()=>go('expenses')}>Ver gastos</button>}/>
-      <CategorizedTxList items={txs}/>
+      <CategorizedTxList items={current}/>
     </section>
 
     <section className="sd-assistant-strip">
@@ -270,14 +270,14 @@ function StatsView({txs,monthTotal,previousTotal}:{txs:Tx[];monthTotal:number;pr
 
 function ExpensesView({txs,monthTotal}:{txs:Tx[];monthTotal:number}){
   const current=txs.filter(t=>t.date.startsWith(currentMonth));
-  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Mis gastos</h1><p>{current.length} movimientos en septiembre · {money(monthTotal)}</p></div></div><section className="sd-card"><CardHead title="Movimientos" subtitle="Agrupados por categoría"/><CategorizedTxList items={txs}/></section></section>
+  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Mis gastos</h1><p>{current.length} movimientos en septiembre · {money(monthTotal)}</p></div></div><section className="sd-card"><CardHead title="Categorías de gasto" subtitle="Abrí una categoría para ver todo lo que contiene"/><CategorizedTxList items={current}/></section></section>
 }
 
 function CategoriesView({txs,selectedCategory,openCategory,back}:{txs:Tx[];selectedCategory:string|null;openCategory:(category:string)=>void;back:()=>void}){
   const current=txs.filter(t=>t.date.startsWith(currentMonth));
   const categories=categorySummary(current);
   if(selectedCategory){
-    const all=txs.filter(t=>t.category===selectedCategory).sort((a,b)=>b.date.localeCompare(a.date));
+    const all=txs.filter(t=>parentCategory(t.category)===selectedCategory).sort((a,b)=>b.date.localeCompare(a.date));
     const month=all.filter(t=>t.date.startsWith(currentMonth));
     const previous=all.filter(t=>t.date.startsWith(previousMonth));
     const monthTotal=month.reduce((s,t)=>s+t.amount,0);
@@ -303,7 +303,7 @@ function CategoriesView({txs,selectedCategory,openCategory,back}:{txs:Tx[];selec
       </div>
     </section>
   }
-  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Categorías</h1><p>Cómo se distribuyen tus gastos este mes. Tocá una categoría para ver el detalle.</p></div></div><div className="sd-category-card-grid">{categories.map((c,i)=><button className="sd-category-big-card" key={c.category} onClick={()=>openCategory(c.category)}><span>{String(i+1).padStart(2,'0')}</span><h3>{c.category}</h3><strong>{money(c.total)}</strong><small>{c.count} movimiento{c.count===1?'':'s'}</small><ChevronRight className="sd-category-big-chevron" size={18}/></button>)}</div></section>
+  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Categorías</h1><p>Categorías principales con todos los gastos que contienen.</p></div></div><div className="sd-category-card-grid">{categories.map((c,i)=>{const names=[...new Set(current.filter(t=>parentCategory(t.category)===c.category).map(t=>t.name))];return <button className="sd-category-big-card" key={c.category} onClick={()=>openCategory(c.category)}><span>{String(i+1).padStart(2,'0')}</span><h3>{c.category}</h3><strong>{money(c.total)}</strong><small>{c.count} movimiento{c.count===1?'':'s'}</small><div className="sd-category-preview">{names.slice(0,5).map(name=><em key={name}>{name}</em>)}{names.length>5&&<em>+{names.length-5} más</em>}</div><ChevronRight className="sd-category-big-chevron" size={18}/></button>})}</div></section>
 }
 
 function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){
@@ -356,9 +356,22 @@ function Source({icon:Icon,title,copy,click}:{icon:any;title:string;copy:string;
 function NavItem({icon:Icon,label,active,onClick}:{icon:any;label:string;active:boolean;onClick:()=>void}){return <button className={`sd-nav-item ${active?'active':''}`} onClick={onClick}><Icon size={17}/><span>{label}</span></button>}
 
 function CategorizedTxList({items}:{items:Tx[]}){
-  const groups=Object.entries(items.reduce<Record<string,Tx[]>>((acc,t)=>{(acc[t.category]??=[]).push(t);return acc},{})).map(([category,group])=>({category,group,total:group.reduce((s,t)=>s+t.amount,0)})).sort((a,b)=>b.total-a.total);
+  const groups=Object.entries(items.reduce<Record<string,Tx[]>>((acc,t)=>{const category=parentCategory(t.category);(acc[category]??=[]).push(t);return acc},{})).map(([category,group])=>({category,group,total:group.reduce((s,t)=>s+t.amount,0)})).sort((a,b)=>b.total-a.total);
   return <div className="sd-accordion">{groups.map(({category,group,total})=><details key={category}><summary><div className="sd-summary-main"><ChevronDown size={15}/><div><b>{category}</b><small>{group.length} movimiento{group.length===1?'':'s'}</small></div></div><strong>{money(total)}</strong></summary><div className="sd-tx-table">{group.map(t=><div className="sd-tx-row" key={t.id}><span className="sd-tx-icon"><ShoppingBag size={15}/></span><div><b>{t.name}</b><small>{new Date(t.date+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short'})} · {t.source}</small></div><strong>{money(t.amount)}</strong></div>)}</div></details>)}</div>
 }
 
-function categorySummary(items:Tx[]){return Object.entries(items.reduce<Record<string,{total:number,count:number}>>((a,t)=>{a[t.category]??={total:0,count:0};a[t.category].total+=t.amount;a[t.category].count++;return a},{})).map(([category,v])=>({category,...v})).sort((a,b)=>b.total-a.total)}
+function parentCategory(category:string){
+  const map:Record<string,string>={
+    'Servicios':'Hogar y servicios','Telefonía':'Hogar y servicios','Cable e internet':'Hogar y servicios','Vivienda':'Hogar y servicios','Impuestos':'Hogar y servicios',
+    'Supermercado':'Alimentación','Alimentos':'Alimentación','Delivery':'Alimentación',
+    'Nafta':'Transporte y auto','Transporte':'Transporte y auto','Auto':'Transporte y auto',
+    'Colegio':'Educación','Educación':'Educación',
+    'Farmacia':'Salud y bienestar','Salud':'Salud y bienestar','Bienestar':'Salud y bienestar','Cuidado personal':'Salud y bienestar',
+    'Streaming':'Suscripciones y tecnología','Tecnología':'Suscripciones y tecnología','Software':'Suscripciones y tecnología','Inteligencia artificial':'Suscripciones y tecnología',
+    'Salidas':'Salidas y entretenimiento','Entretenimiento':'Salidas y entretenimiento',
+    'Seguros':'Seguros','Compras':'Compras','Mascotas':'Mascotas'
+  };
+  return map[category]||category||'Otros';
+}
+function categorySummary(items:Tx[]){return Object.entries(items.reduce<Record<string,{total:number,count:number}>>((a,t)=>{const category=parentCategory(t.category);a[category]??={total:0,count:0};a[category].total+=t.amount;a[category].count++;return a},{})).map(([category,v])=>({category,...v})).sort((a,b)=>b.total-a.total)}
 function fileToDataUrl(file:File){return new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=reject;r.readAsDataURL(file)})}
