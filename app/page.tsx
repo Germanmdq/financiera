@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import {seedTransactions,type Tx} from './data';
 
-type View='home'|'activity'|'add'|'accounts';
+type View='home'|'stats'|'expenses'|'categories'|'add'|'accounts';
 type Msg={role:'user'|'assistant',text:string};
 
 const money=(n:number)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(n);
@@ -65,7 +65,9 @@ export default function Page(){
     const n=clean.toLocaleLowerCase('es-AR');
     const action=(target:View,label:string)=>{setView(target);setMsgs(v=>[...v,{role:'assistant',text:`Listo. Abrí ${label}.`}]);};
     if(/\b(cargar|carga|agregar gasto|nuevo gasto|sumar gasto)\b/.test(n)){action('add','Cargar');return;}
-    if(/\b(actividad|resumen|cómo voy|como voy|qué gasté|que gaste)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('activity','Actividad');return;}
+    if(/\b(estadísticas|estadisticas|resumen|cómo voy|como voy)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('stats','Estadísticas');return;}
+    if(/\b(gastos|movimientos|qué gasté|que gaste)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('expenses','Mis gastos');return;}
+    if(/\b(categorías|categorias|rubros)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('categories','Categorías');return;}
     if(/\b(cuentas|fuentes|tarjetas|billeteras|bancos)\b/.test(n)&&/\b(mostrar|mostrame|abrir|abre|andá|anda|ir|ver)\b/.test(n)){action('accounts','Fuentes');return;}
     setBusy(true);
     try{
@@ -100,7 +102,7 @@ export default function Page(){
     }catch(e){setNotice(e instanceof Error?e.message:'No pude analizar el PDF.')}finally{setBusy(false)}
   };
 
-  const title=view==='home'?'Panel general':view==='activity'?'Actividad':view==='add'?'Cargar':'Fuentes';
+  const title=view==='home'?'Panel general':view==='stats'?'Estadísticas':view==='expenses'?'Mis gastos':view==='categories'?'Categorías':view==='add'?'Cargar':'Fuentes';
 
   return <div className="sd-app">
     <button className={`sd-mobile-backdrop ${sidebarOpen?'show':''}`} onClick={()=>setSidebarOpen(false)} aria-label="Cerrar menú"/>
@@ -115,9 +117,9 @@ export default function Page(){
         <span className="sd-nav-label">GENERAL</span>
         <NavItem icon={Home} label="Inicio" active={view==='home'} onClick={()=>navigate('home')}/>
         <NavItem icon={Plus} label="Cargar" active={view==='add'} onClick={()=>navigate('add')}/>
-        <NavItem icon={BarChart3} label="Estadísticas" active={view==='activity'} onClick={()=>navigate('activity')}/>
-        <NavItem icon={ActivityIcon} label="Mis gastos" active={view==='activity'} onClick={()=>navigate('activity')}/>
-        <NavItem icon={Tags} label="Categorías" active={view==='activity'} onClick={()=>navigate('activity')}/>
+        <NavItem icon={BarChart3} label="Estadísticas" active={view==='stats'} onClick={()=>navigate('stats')}/>
+        <NavItem icon={ActivityIcon} label="Mis gastos" active={view==='expenses'} onClick={()=>navigate('expenses')}/>
+        <NavItem icon={Tags} label="Categorías" active={view==='categories'} onClick={()=>navigate('categories')}/>
         <NavItem icon={WalletCards} label="Fuentes" active={view==='accounts'} onClick={()=>navigate('accounts')}/>
       </nav>
 
@@ -143,7 +145,9 @@ export default function Page(){
 
       <div className="sd-page"><div className="sd-container">
         {view==='home'&&<DashboardHome monthTotal={monthTotal} previousTotal={previousTotal} txs={txs} go={navigate} openAgent={()=>setAgentOpen(true)}/>} 
-        {view==='activity'&&<ActivityView txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
+        {view==='stats'&&<StatsView txs={txs} monthTotal={monthTotal} previousTotal={previousTotal}/>} 
+        {view==='expenses'&&<ExpensesView txs={txs} monthTotal={monthTotal}/>} 
+        {view==='categories'&&<CategoriesView txs={txs}/>} 
         {view==='add'&&<AddView manual={manual} setManual={setManual} addTx={addTx} scanRef={scanRef} pdfRef={pdfRef} scan={scan} pdf={pdf} notice={notice} setNotice={setNotice} busy={busy}/>} 
         {view==='accounts'&&<AccountsView go={navigate}/>} 
       </div></div>
@@ -151,7 +155,7 @@ export default function Page(){
 
     <nav className="sd-mobile-dock" aria-label="Navegación móvil">
       <NavItem icon={Home} label="Inicio" active={view==='home'} onClick={()=>navigate('home')}/>
-      <NavItem icon={ActivityIcon} label="Actividad" active={view==='activity'} onClick={()=>navigate('activity')}/>
+      <NavItem icon={BarChart3} label="Estadísticas" active={view==='stats'} onClick={()=>navigate('stats')}/>
       <button className="sd-mobile-plus" onClick={()=>navigate('add')} aria-label="Cargar"><Plus size={20}/></button>
       <NavItem icon={WalletCards} label="Fuentes" active={view==='accounts'} onClick={()=>navigate('accounts')}/>
       <button className={`sd-mobile-agent ${agentOpen?'active':''}`} onClick={()=>setAgentOpen(true)}><Sparkles size={17}/><span>Asistente</span></button>
@@ -169,7 +173,7 @@ function DashboardHome({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:n
   return <section className="sd-stack">
     <div className="sd-overview-head">
       <div><h1>Resumen de septiembre</h1><p>Información actualizada con tus movimientos cargados.</p></div>
-      <div className="sd-overview-actions"><button className="sd-btn secondary" onClick={()=>go('activity')}>Ver actividad</button><button className="sd-btn primary" onClick={()=>go('add')}><Plus size={15}/> Cargar movimiento</button></div>
+      <div className="sd-overview-actions"><button className="sd-btn secondary" onClick={()=>go('stats')}>Ver estadísticas</button><button className="sd-btn primary" onClick={()=>go('add')}><Plus size={15}/> Cargar movimiento</button></div>
     </div>
 
     <div className="sd-kpi-grid">
@@ -183,15 +187,15 @@ function DashboardHome({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:n
       <aside className="sd-section-rail">
         <div className="sd-section-rail-head"><span>SECCIONES</span><b>Tu panel</b></div>
         <button onClick={()=>go('add')}><span><Plus size={18}/></span><div><b>Cargar</b><small>Ticket, PDF o manual</small></div><ChevronRight size={16}/></button>
-        <button onClick={()=>go('activity')}><span><BarChart3 size={18}/></span><div><b>Estadísticas</b><small>Comparaciones y evolución</small></div><ChevronRight size={16}/></button>
-        <button onClick={()=>go('activity')}><span><ShoppingBag size={18}/></span><div><b>Mis gastos</b><small>Movimientos y recurrencias</small></div><ChevronRight size={16}/></button>
-        <button onClick={()=>go('activity')}><span><Tags size={18}/></span><div><b>Categorías</b><small>Rubros y totales</small></div><ChevronRight size={16}/></button>
+        <button onClick={()=>go('stats')}><span><BarChart3 size={18}/></span><div><b>Estadísticas</b><small>Comparaciones y evolución</small></div><ChevronRight size={16}/></button>
+        <button onClick={()=>go('expenses')}><span><ShoppingBag size={18}/></span><div><b>Mis gastos</b><small>Movimientos y recurrencias</small></div><ChevronRight size={16}/></button>
+        <button onClick={()=>go('categories')}><span><Tags size={18}/></span><div><b>Categorías</b><small>Rubros y totales</small></div><ChevronRight size={16}/></button>
         <button onClick={()=>go('accounts')}><span><WalletCards size={18}/></span><div><b>Fuentes</b><small>Bancos y billeteras</small></div><ChevronRight size={16}/></button>
       </aside>
 
       <div className="sd-main-cards">
         <section className="sd-card">
-          <CardHead title="Actividad por categoría" subtitle="Septiembre" action={<button onClick={()=>go('activity')}>Ver todo</button>}/>
+          <CardHead title="Actividad por categoría" subtitle="Septiembre" action={<button onClick={()=>go('categories')}>Ver todo</button>}/>
           <div className="sd-category-cards">
             {categories.map((c,i)=><article className="sd-category-card-item" key={c.category}>
               <span className="sd-category-index">{String(i+1).padStart(2,'0')}</span>
@@ -213,7 +217,7 @@ function DashboardHome({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:n
     </div>
 
     <section className="sd-card">
-      <CardHead title="Movimientos" subtitle="Agrupados por categoría" action={<button onClick={()=>go('activity')}>Abrir actividad</button>}/>
+      <CardHead title="Movimientos" subtitle="Agrupados por categoría" action={<button onClick={()=>go('expenses')}>Ver gastos</button>}/>
       <CategorizedTxList items={txs}/>
     </section>
 
@@ -224,24 +228,48 @@ function DashboardHome({monthTotal,previousTotal,txs,go,openAgent}:{monthTotal:n
   </section>
 }
 
-function ActivityView({txs,monthTotal,previousTotal}:{txs:Tx[];monthTotal:number;previousTotal:number}){
+function StatsView({txs,monthTotal,previousTotal}:{txs:Tx[];monthTotal:number;previousTotal:number}){
   const current=txs.filter(t=>t.date.startsWith(currentMonth));
   const categories=categorySummary(current);
   const delta=previousTotal?Math.round(((monthTotal-previousTotal)/previousTotal)*100):0;
+  const months=[
+    {label:'Jul',value:txs.filter(t=>t.date.startsWith('2026-07')).reduce((s,t)=>s+t.amount,0)},
+    {label:'Ago',value:previousTotal},
+    {label:'Sep',value:monthTotal},
+  ];
+  const maxMonth=Math.max(...months.map(m=>m.value),1);
+  const topMax=Math.max(...categories.slice(0,6).map(c=>c.total),1);
+  const recurringNames=['Colegio San José','Netflix','Spotify','OpenAI','Claude','Flow','Personal','Sancor Seguros','EDEA','Camuzzi'];
+  const recurring=current.filter(t=>recurringNames.includes(t.name)).reduce((s,t)=>s+t.amount,0);
+  const daily=Math.round(monthTotal/26);
+  const average=current.length?Math.round(monthTotal/current.length):0;
   return <section className="sd-stack">
-    <div className="sd-overview-head"><div><h1>Actividad</h1><p>Detalle de gastos, categorías y recurrencias.</p></div></div>
+    <div className="sd-overview-head"><div><h1>Estadísticas</h1><p>Evolución, distribución y comportamiento de tus gastos.</p></div></div>
     <div className="sd-kpi-grid compact">
       <Metric title="Septiembre" value={money(monthTotal)} note={`${current.length} movimientos`} />
-      <Metric title="Agosto" value={money(previousTotal)} note="Mes anterior" />
-      <Metric title="Variación" value={`${delta>=0?'+':''}${delta}%`} note="Contra agosto" />
-      <Metric title="Categorías" value={String(categories.length)} note="Con movimientos" />
+      <Metric title="Variación mensual" value={`${delta>=0?'+':''}${delta}%`} note="Contra agosto" />
+      <Metric title="Promedio diario" value={money(daily)} note="Sobre 26 días" />
+      <Metric title="Recurrentes" value={money(recurring)} note="Este mes" />
     </div>
-    <div className="sd-dashboard-grid">
-      <section className="sd-card sd-card-large"><CardHead title="Principales categorías" subtitle="Ordenadas por importe"/><div className="sd-category-table">{categories.slice(0,8).map((c,i)=><div className="sd-category-table-row" key={c.category}><span className="sd-rank">{String(i+1).padStart(2,'0')}</span><div><b>{c.category}</b><small>{c.count} movimientos</small></div><strong>{money(c.total)}</strong></div>)}</div></section>
-      <section className="sd-card"><CardHead title="Gastos recurrentes" subtitle="Septiembre"/><div className="sd-simple-list">{['Colegio San José','Netflix','Spotify','OpenAI','Claude','Flow','Personal','Sancor Seguros','EDEA','Camuzzi'].map(name=>{const hit=current.find(t=>t.name===name);return hit?<div key={name}><span>{name}</span><b>{money(hit.amount)}</b></div>:null})}</div></section>
+    <div className="sd-stats-grid">
+      <section className="sd-card sd-chart-card"><CardHead title="Evolución mensual" subtitle="Últimos 3 meses"/><div className="sd-bar-chart">{months.map(m=><div className="sd-bar-col" key={m.label}><div className="sd-bar-value">{money(m.value)}</div><div className="sd-bar-track"><div className="sd-bar-fill" style={{height:`${Math.max(12,(m.value/maxMonth)*100)}%`}}/></div><span>{m.label}</span></div>)}</div></section>
+      <section className="sd-card sd-chart-card"><CardHead title="Peso por categoría" subtitle="Top 6 de septiembre"/><div className="sd-share-list">{categories.slice(0,6).map(c=><div className="sd-share-row" key={c.category}><div><b>{c.category}</b><span>{money(c.total)}</span></div><div className="sd-share-track"><span style={{width:`${Math.max(8,(c.total/topMax)*100)}%`}}/></div></div>)}</div></section>
     </div>
-    <section className="sd-card"><CardHead title="Todos los movimientos" subtitle="Abrí una categoría para ver el detalle"/><CategorizedTxList items={txs}/></section>
+    <div className="sd-stats-grid secondary">
+      <section className="sd-card"><CardHead title="Indicadores" subtitle="Lectura rápida"/><div className="sd-stat-cards"><div><span>Mayor categoría</span><b>{categories[0]?.category||'—'}</b><strong>{categories[0]?money(categories[0].total):'—'}</strong></div><div><span>Categorías activas</span><b>{categories.length}</b><strong>este mes</strong></div><div><span>Ticket promedio</span><b>{money(average)}</b><strong>por movimiento</strong></div></div></section>
+      <section className="sd-card"><CardHead title="Comparación" subtitle="Septiembre vs agosto"/><div className="sd-compare-card"><div><span>Agosto</span><b>{money(previousTotal)}</b></div><div className="sd-compare-arrow">→</div><div><span>Septiembre</span><b>{money(monthTotal)}</b></div><strong className={delta>=0?'up':'down'}>{delta>=0?'+':''}{delta}%</strong></div></section>
+    </div>
   </section>
+}
+
+function ExpensesView({txs,monthTotal}:{txs:Tx[];monthTotal:number}){
+  const current=txs.filter(t=>t.date.startsWith(currentMonth));
+  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Mis gastos</h1><p>{current.length} movimientos en septiembre · {money(monthTotal)}</p></div></div><section className="sd-card"><CardHead title="Movimientos" subtitle="Agrupados por categoría"/><CategorizedTxList items={txs}/></section></section>
+}
+
+function CategoriesView({txs}:{txs:Tx[]}){
+  const categories=categorySummary(txs.filter(t=>t.date.startsWith(currentMonth)));
+  return <section className="sd-stack"><div className="sd-overview-head"><div><h1>Categorías</h1><p>Cómo se distribuyen tus gastos este mes.</p></div></div><div className="sd-category-card-grid">{categories.map((c,i)=><article className="sd-category-big-card" key={c.category}><span>{String(i+1).padStart(2,'0')}</span><h3>{c.category}</h3><strong>{money(c.total)}</strong><small>{c.count} movimiento{c.count===1?'':'s'}</small></article>)}</div></section>
 }
 
 function AddView({manual,setManual,addTx,scanRef,pdfRef,scan,pdf,notice,setNotice,busy}:{manual:any;setManual:any;addTx:any;scanRef:any;pdfRef:any;scan:any;pdf:any;notice:string;setNotice:(s:string)=>void;busy:boolean}){
